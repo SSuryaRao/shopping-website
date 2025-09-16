@@ -12,19 +12,34 @@ export default function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // Close menus when clicking outside
+  // Close menus when clicking outside - more reliable version
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.user-menu') && !target.closest('.mobile-menu')) {
-        setShowUserMenu(false);
+
+      // Close mobile menu if clicking outside and not on the hamburger button
+      if (showMobileMenu &&
+          !target.closest('.mobile-menu-container') &&
+          !target.closest('.hamburger-button')) {
         setShowMobileMenu(false);
+      }
+
+      // Close user menu if clicking outside of it
+      if (showUserMenu && !target.closest('.user-menu')) {
+        setShowUserMenu(false);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+    // Use a slight delay to avoid conflicts with click handlers
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMobileMenu, showUserMenu]);
 
   const handleLogout = async () => {
     try {
@@ -38,6 +53,26 @@ export default function Navigation() {
 
   const closeMobileMenu = () => {
     setShowMobileMenu(false);
+  };
+
+  // Simple and reliable toggle function
+  const toggleMobileMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    console.log('Hamburger clicked, current state:', showMobileMenu);
+
+    // Use functional update to ensure we get the latest state
+    setShowMobileMenu(prevState => {
+      const newState = !prevState;
+      console.log('Setting mobile menu to:', newState);
+      return newState;
+    });
+  };
+
+  // Additional safety: direct click handler without events
+  const handleHamburgerClick = () => {
+    setShowMobileMenu(prev => !prev);
   };
 
   return (
@@ -125,8 +160,12 @@ export default function Navigation() {
 
                   {/* Mobile menu button */}
                   <button
-                    onClick={() => setShowMobileMenu(!showMobileMenu)}
-                    className="md:hidden p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    onClick={toggleMobileMenu}
+                    onTouchStart={handleHamburgerClick}
+                    className="hamburger-button md:hidden p-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    type="button"
+                    aria-label="Toggle mobile menu"
+                    aria-expanded={showMobileMenu}
                   >
                     {showMobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                   </button>
@@ -140,8 +179,12 @@ export default function Navigation() {
                     Sign In
                   </Link>
                   <button
-                    onClick={() => setShowMobileMenu(!showMobileMenu)}
-                    className="md:hidden p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    onClick={toggleMobileMenu}
+                    onTouchStart={handleHamburgerClick}
+                    className="hamburger-button md:hidden p-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    type="button"
+                    aria-label="Toggle mobile menu"
+                    aria-expanded={showMobileMenu}
                   >
                     {showMobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                   </button>
@@ -152,11 +195,12 @@ export default function Navigation() {
         </div>
       </nav>
 
+
       {/* Mobile menu overlay */}
       {showMobileMenu && (
         <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={closeMobileMenu}>
           <div
-            className="mobile-menu absolute top-16 left-0 right-0 bg-white shadow-2xl border-b border-gray-200 max-h-[calc(100vh-4rem)] overflow-y-auto"
+            className="mobile-menu-container absolute top-16 left-0 right-0 bg-white shadow-2xl border-b border-gray-200 max-h-[calc(100vh-4rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {user ? (
