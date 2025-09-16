@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setFirebaseUser(firebaseUser);
+      setLoading(true); // Ensure loading is true during auth state changes
 
       if (firebaseUser) {
         try {
@@ -53,12 +54,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(userProfile);
           } catch (error: any) {
             console.error('Error loading user profile:', error);
-            if (error.message?.includes('not registered')) {
-              // User exists in Firebase but not in our backend - they need to complete registration
-              console.log('User not registered in backend, redirecting to signup');
+
+            if (error.message?.includes('not registered') || error.message?.includes('404')) {
+              // User exists in Firebase but not in our backend
+              console.log('User not registered in backend');
+
+              // For Google users, try auto-registration as customer
+              if (firebaseUser.providerData.some(provider => provider.providerId === 'google.com')) {
+                console.log('Auto-registering Google user as customer');
+                try {
+                  const registrationData = {
+                    role: 'customer' as const,
+                    profile: {
+                      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                    }
+                  };
+
+                  await apiClient.register(registrationData);
+                  console.log('Auto-registration successful');
+
+                  // Fetch the newly created user profile
+                  const newUserProfile = await apiClient.getUserProfile();
+                  setUser(newUserProfile);
+                  return; // Exit early on success
+                } catch (registerError: any) {
+                  console.error('Auto-registration failed:', registerError);
+                }
+              }
+
+              // If not Google user or auto-registration failed
+              setUser(null);
+            } else if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+              // Network error - backend is not running
+              console.warn('Backend server appears to be offline. User can still browse products but cannot access authenticated features.');
               setUser(null);
             } else {
-              throw error;
+              // Other API errors
+              console.warn('API error, continuing without user profile:', error.message);
+              setUser(null);
             }
           }
         } catch (error) {
@@ -115,7 +148,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Get the Firebase token
+      const token = await user.getIdToken();
+      apiClient.setAuthToken(token);
+
+      // Try to get user profile to see if they're already registered
+      try {
+        const userProfile = await apiClient.getUserProfile();
+        console.log('Existing user profile found:', userProfile);
+        setUser(userProfile);
+      } catch (error: any) {
+        if (error.message?.includes('not registered') || error.message?.includes('404')) {
+          // User needs to be registered in backend - auto-register as customer
+          console.log('Auto-registering Google user as customer');
+          try {
+            const registrationData = {
+              role: 'customer' as const,
+              profile: {
+                name: user.displayName || user.email?.split('@')[0] || 'User',
+              }
+            };
+
+            const result = await apiClient.register(registrationData);
+            console.log('Auto-registration successful:', result);
+
+            // Fetch the newly created user profile
+            const newUserProfile = await apiClient.getUserProfile();
+            setUser(newUserProfile);
+          } catch (registerError: any) {
+            console.error('Auto-registration failed:', registerError);
+            // If registration fails, sign out and throw error
+            await signOut(auth);
+            throw new Error('Failed to create user account. Please try again.');
+          }
+        } else {
+          // Other API error
+          console.error('API error during Google sign-in:', error);
+          await signOut(auth);
+          throw error;
+        }
+      }
     } catch (error) {
       console.error('Error signing in with Google:', error);
       throw error;

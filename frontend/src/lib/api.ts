@@ -27,18 +27,28 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'API request failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error: any) {
+      // Handle network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Unable to connect to server. Please check if the backend is running.');
+      }
+
+      // Re-throw other errors
+      throw error;
     }
-
-    const result = await response.json();
-    return result.data || result;
   }
 
   // Auth methods
