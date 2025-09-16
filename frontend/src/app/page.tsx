@@ -104,7 +104,7 @@ export default function Home() {
                 placeholder="Search amazing products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition-all bg-white shadow-lg"
+                className="w-full pl-12 pr-4 py-4 text-lg text-gray-900 placeholder-gray-500 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition-all bg-white shadow-lg"
               />
             </div>
           </div>

@@ -444,7 +444,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
                   placeholder="Enter product name..."
                 />
               </div>
@@ -458,7 +458,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white resize-none text-gray-900 placeholder-gray-500"
                   placeholder="Describe your product..."
                 />
               </div>
@@ -478,7 +478,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                     required
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -498,7 +498,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                     required
                     value={formData.points}
                     onChange={(e) => setFormData({...formData, points: parseInt(e.target.value) || 0})}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
                     placeholder="0"
                   />
                 </div>
@@ -518,7 +518,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                     required
                     value={formData.stock}
                     onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value) || 0})}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
                     placeholder="0"
                   />
                 </div>
@@ -532,7 +532,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                   required
                   value={formData.category}
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-gray-900"
                 >
                   <option value="">Select a category</option>
                   {categories.map(category => (
