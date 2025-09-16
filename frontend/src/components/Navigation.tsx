@@ -109,8 +109,8 @@ export default function Navigation() {
 
                   {/* User menu */}
                   <div className="relative user-menu">
-                    <button
-                      onClick={() => setShowUserMenu(!showUserMenu)}
+                    <Link
+                      href="/dashboard?tab=profile"
                       className="flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100 transition-colors"
                     >
                       <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
@@ -119,58 +119,8 @@ export default function Navigation() {
                       <span className="text-sm font-medium text-gray-700 hidden md:block max-w-20 truncate">
                         {user?.name || 'User'}
                       </span>
-                    </button>
+                    </Link>
 
-                    {showUserMenu && (
-                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 py-2 z-50">
-                        {/* User info header */}
-                        <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
-                              <User className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{user?.name || 'User'}</p>
-                              <div className="flex items-center space-x-1 text-yellow-600">
-                                <Star className="h-3 w-3" />
-                                <span className="text-sm font-medium">{user?.totalPoints || 0} points</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Menu items */}
-                        <div className="py-2">
-                          <Link
-                            href="/dashboard"
-                            className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                            onClick={() => setShowUserMenu(false)}
-                          >
-                            <LayoutDashboard className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-700">Dashboard</span>
-                          </Link>
-
-                          {user?.isAdmin && (
-                            <Link
-                              href="/admin"
-                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                              onClick={() => setShowUserMenu(false)}
-                            >
-                              <Settings className="h-4 w-4 text-gray-500" />
-                              <span className="text-sm text-gray-700">Admin Panel</span>
-                            </Link>
-                          )}
-
-                          <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
-                          >
-                            <LogOut className="h-4 w-4" />
-                            <span className="text-sm">Sign Out</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Mobile menu button */}
@@ -205,18 +155,21 @@ export default function Navigation() {
       {/* Mobile menu overlay */}
       {showMobileMenu && (
         <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={closeMobileMenu}>
-          <div className="mobile-menu absolute top-16 left-0 right-0 bg-white shadow-2xl border-b border-gray-200 max-h-[calc(100vh-4rem)] overflow-y-auto">
-            {user && (
+          <div
+            className="mobile-menu absolute top-16 left-0 right-0 bg-white shadow-2xl border-b border-gray-200 max-h-[calc(100vh-4rem)] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {user ? (
               <>
                 {/* Mobile user info */}
-                <div className="px-4 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
-                      <User className="h-6 w-6 text-white" />
+                <div className="px-6 py-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+                      <User className="h-7 w-7 text-white" />
                     </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{user?.name || 'User'}</p>
-                      <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+                    <div className="flex-1">
+                      <p className="text-lg font-bold text-gray-900">{user?.name || 'User'}</p>
+                      <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg mt-1">
                         <Star className="h-3 w-3" />
                         <span>{user?.totalPoints || 0} points</span>
                       </div>
@@ -225,71 +178,128 @@ export default function Navigation() {
                 </div>
 
                 {/* Mobile menu items */}
-                <div className="py-2">
+                <div className="py-4">
                   <Link
                     href="/"
-                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors"
+                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
                     onClick={closeMobileMenu}
                   >
-                    <Home className="h-5 w-5 text-gray-500" />
-                    <span className="font-medium text-gray-700">Home</span>
+                    <div className="p-2 rounded-xl bg-indigo-100">
+                      <Home className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-900">Home</span>
+                      <p className="text-sm text-gray-500">Browse products</p>
+                    </div>
                   </Link>
 
                   <Link
                     href="/dashboard"
-                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors"
+                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
                     onClick={closeMobileMenu}
                   >
-                    <LayoutDashboard className="h-5 w-5 text-gray-500" />
-                    <span className="font-medium text-gray-700">Dashboard</span>
+                    <div className="p-2 rounded-xl bg-blue-100">
+                      <LayoutDashboard className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-900">Dashboard</span>
+                      <p className="text-sm text-gray-500">View your stats & orders</p>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/dashboard?tab=profile"
+                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
+                    onClick={closeMobileMenu}
+                  >
+                    <div className="p-2 rounded-xl bg-purple-100">
+                      <User className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-900">Profile</span>
+                      <p className="text-sm text-gray-500">Manage your account</p>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/cart"
+                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
+                    onClick={closeMobileMenu}
+                  >
+                    <div className="p-2 rounded-xl bg-green-100 relative">
+                      <ShoppingCart className="h-5 w-5 text-green-600" />
+                      {getItemCount() > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {getItemCount()}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-900">Shopping Cart</span>
+                      <p className="text-sm text-gray-500">
+                        {getItemCount() > 0 ? `${getItemCount()} items in cart` : 'Your cart is empty'}
+                      </p>
+                    </div>
                   </Link>
 
                   {user?.isAdmin && (
                     <Link
                       href="/admin"
-                      className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors"
+                      className="flex items-center space-x-4 px-6 py-4 hover:bg-green-50 transition-colors active:bg-green-100 border-t border-gray-200 mt-2 pt-6"
                       onClick={closeMobileMenu}
                     >
-                      <Settings className="h-5 w-5 text-gray-500" />
-                      <span className="font-medium text-gray-700">Admin Panel</span>
+                      <div className="p-2 rounded-xl bg-green-100">
+                        <Settings className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-green-800">Admin Panel</span>
+                        <p className="text-sm text-green-600">Manage products & users</p>
+                      </div>
                     </Link>
                   )}
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center space-x-4 px-6 py-4 hover:bg-red-50 text-red-600 transition-colors"
+                    className="w-full flex items-center space-x-4 px-6 py-4 hover:bg-red-50 text-red-600 transition-colors active:bg-red-100 border-t border-gray-200 mt-4 pt-6"
                   >
-                    <LogOut className="h-5 w-5" />
-                    <span className="font-medium">Sign Out</span>
+                    <div className="p-2 rounded-xl bg-red-100">
+                      <LogOut className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="text-left">
+                      <span className="font-bold text-red-600">Sign Out</span>
+                      <p className="text-sm text-red-500">Logout from your account</p>
+                    </div>
                   </button>
                 </div>
               </>
-            )}
-
-            {/* Mobile menu for non-authenticated users */}
-            {!user && (
-              <div className="py-4">
+            ) : (
+              <div className="py-6">
                 <Link
                   href="/"
-                  className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors"
+                  className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
                   onClick={closeMobileMenu}
                 >
-                  <Home className="h-5 w-5 text-gray-500" />
-                  <span className="font-medium text-gray-700">Home</span>
+                  <div className="p-2 rounded-xl bg-indigo-100">
+                    <Home className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-900">Home</span>
+                    <p className="text-sm text-gray-500">Browse our products</p>
+                  </div>
                 </Link>
 
-                <div className="px-6 py-4 border-t border-gray-200 mt-2">
-                  <div className="space-y-3">
+                <div className="px-6 py-6 border-t border-gray-200 mt-4">
+                  <div className="space-y-4">
                     <Link
                       href="/login"
-                      className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium text-center shadow-lg"
+                      className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-center shadow-lg hover:shadow-xl transition-all transform active:scale-95"
                       onClick={closeMobileMenu}
                     >
                       Sign In
                     </Link>
                     <Link
                       href="/signup"
-                      className="block w-full border-2 border-indigo-600 text-indigo-600 px-6 py-3 rounded-xl font-medium text-center hover:bg-indigo-50"
+                      className="block w-full border-2 border-indigo-600 text-indigo-600 px-8 py-4 rounded-2xl font-bold text-center hover:bg-indigo-50 transition-all active:bg-indigo-100"
                       onClick={closeMobileMenu}
                     >
                       Join Free
