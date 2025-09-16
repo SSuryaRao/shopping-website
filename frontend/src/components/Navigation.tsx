@@ -43,9 +43,9 @@ export default function Navigation() {
 
   const handleLogout = async () => {
     try {
-      await logout();
       setShowUserMenu(false);
       setShowMobileMenu(false);
+      await logout();
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -144,9 +144,9 @@ export default function Navigation() {
 
                   {/* User menu */}
                   <div className="relative user-menu">
-                    <Link
-                      href="/dashboard?tab=profile"
-                      className="flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                    <button
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      className="flex items-center space-x-2 p-2 rounded-xl hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
                         <User className="h-4 w-4 text-white" />
@@ -154,8 +154,70 @@ export default function Navigation() {
                       <span className="text-sm font-medium text-gray-700 hidden md:block max-w-20 truncate">
                         {user?.name || 'User'}
                       </span>
-                    </Link>
+                    </button>
 
+                    {/* Profile Dropdown Menu */}
+                    {showUserMenu && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 py-2 z-50">
+                        {/* User info header */}
+                        <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                              <User className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{user?.name || 'User'}</p>
+                              <div className="flex items-center space-x-1 text-yellow-600">
+                                <Star className="h-3 w-3" />
+                                <span className="text-sm font-medium">{user?.totalPoints || 0} points</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Menu items */}
+                        <div className="py-2">
+                          <Link
+                            href="/dashboard?tab=profile"
+                            className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <User className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm text-gray-700">View Profile</span>
+                          </Link>
+
+                          <Link
+                            href="/dashboard"
+                            className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <LayoutDashboard className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm text-gray-700">Dashboard</span>
+                          </Link>
+
+                          {user?.isAdmin && (
+                            <Link
+                              href="/admin"
+                              className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                              onClick={() => setShowUserMenu(false)}
+                            >
+                              <Settings className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm text-gray-700">Admin Panel</span>
+                            </Link>
+                          )}
+
+                          <div className="border-t border-gray-100 mt-2 pt-2">
+                            <button
+                              onClick={handleLogout}
+                              className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
+                            >
+                              <LogOut className="h-4 w-4" />
+                              <span className="text-sm">Sign Out</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Mobile menu button */}
