@@ -8,6 +8,7 @@ import { useCart } from '@/lib/cart-context';
 import { apiClient } from '@/lib/api';
 import { Minus, Plus, Trash2, Star, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import PaymentModal from '@/components/PaymentModal';
 
 export default function CartPage() {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export default function CartPage() {
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentOrder, setCurrentOrder] = useState<any>(null);
   const router = useRouter();
 
   const subtotal = getSubtotal();
@@ -46,15 +49,20 @@ export default function CartPage() {
         pointsToRedeem,
       };
 
-      await apiClient.createOrder(orderData);
-      clearCart();
-      router.push('/dashboard?tab=orders');
+      const order = await apiClient.createOrder(orderData);
+      setCurrentOrder(order);
+      setShowPaymentModal(true);
     } catch (error) {
-      console.error('Error placing order:', error);
-      alert('Error placing order. Please try again.');
+      console.error('Error creating order:', error);
+      alert('Error creating order. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    clearCart();
+    router.push('/dashboard?tab=orders');
   };
 
   if (!user) {
@@ -224,10 +232,20 @@ export default function CartPage() {
             disabled={loading || items.length === 0}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? 'Processing...' : 'Place Order'}
+            {loading ? 'Creating Order...' : 'Proceed to Payment'}
           </button>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && currentOrder && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          order={currentOrder}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

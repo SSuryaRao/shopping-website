@@ -12,6 +12,7 @@ import userRoutes from './routes/user';
 import orderRoutes from './routes/orders';
 import adminRoutes from './routes/admin';
 import inviteRoutes from './routes/invite';
+import paymentRoutes from './routes/payments';
 
 dotenv.config();
 
@@ -129,6 +130,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', inviteRoutes);
 

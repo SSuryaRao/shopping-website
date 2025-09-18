@@ -7,6 +7,8 @@ export interface IOrder extends Document {
   totalPrice: number;
   pointsEarned: number;
   status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,15 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       enum: ['pending', 'processing', 'completed', 'cancelled'],
       default: 'pending',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed', 'refunded'],
+      default: 'pending',
+    },
+    paymentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Payment',
     },
   },
   {

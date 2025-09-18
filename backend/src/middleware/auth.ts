@@ -113,3 +113,6 @@ export const requireSuperAdmin = (
 
   next();
 };
+
+// Export verifyToken as alias for authenticateToken
+export const verifyToken = authenticateToken;
