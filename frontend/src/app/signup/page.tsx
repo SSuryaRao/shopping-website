@@ -23,7 +23,7 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [registrationResult, setRegistrationResult] = useState<any>(null);
+  // const [registrationResult, setRegistrationResult] = useState<unknown>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ export default function SignUpPage() {
         },
       });
 
-      setRegistrationResult(result);
+      // setRegistrationResult(result);
 
       if (result.status === 'approved') {
         setSuccess(result.message);
@@ -63,8 +63,9 @@ export default function SignUpPage() {
       } else if (result.status === 'pending') {
         setSuccess(result.message);
       }
-    } catch (error: any) {
-      setError(error.message || 'Failed to create account');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -77,8 +78,9 @@ export default function SignUpPage() {
     try {
       await signInWithGoogle();
       router.push('/');
-    } catch (error: any) {
-      setError(error.message || 'Failed to sign in with Google');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

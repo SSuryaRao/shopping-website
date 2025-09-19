@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api';
 import { Product } from '@/types';
-import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, Settings, UserPlus } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -362,8 +362,8 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
       }
 
       onSave(savedProduct);
-    } catch (error: any) {
-      setError(error.message || 'Failed to save product');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to save product');
     } finally {
       setLoading(false);
     }
@@ -408,9 +408,11 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
               <div className="text-center">
                 <div className="mx-auto w-32 h-32 rounded-xl bg-white border-2 border-gray-200 flex items-center justify-center mb-4 overflow-hidden">
                   {imagePreview ? (
-                    <img
+                    <Image
                       src={imagePreview}
                       alt="Preview"
+                      width={128}
+                      height={128}
                       className="w-full h-full object-cover"
                     />
                   ) : (

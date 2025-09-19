@@ -14,9 +14,9 @@ export class ApiClient {
 
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: any = {
+    const headers: Record<string, string> = {
       ...options.headers,
-    };
+    } as Record<string, string>;
 
     // Only add Content-Type for JSON requests
     if (options.body && typeof options.body === 'string') {
@@ -40,9 +40,9 @@ export class ApiClient {
 
       const result = await response.json();
       return result.data || result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle network errors
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error('Unable to connect to server. Please check if the backend is running.');
       }
 
@@ -110,7 +110,7 @@ export class ApiClient {
     return this.request('/user/profile');
   }
 
-  async updateUserProfile(userData: any) {
+  async updateUserProfile(userData: Record<string, unknown>) {
     return this.request('/user/profile', {
       method: 'PUT',
       body: JSON.stringify(userData),

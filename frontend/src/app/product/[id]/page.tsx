@@ -74,8 +74,9 @@ export default function ProductPage() {
 
       alert(`Order placed successfully! You earned ${product.points * quantity} points!`);
       router.push('/dashboard?tab=orders');
-    } catch (error: any) {
-      setError(error.message || 'Failed to place order');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to place order';
+      setError(errorMessage);
     } finally {
       setPurchasing(false);
     }

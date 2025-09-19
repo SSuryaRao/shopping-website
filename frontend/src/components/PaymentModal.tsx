@@ -4,9 +4,44 @@ import { useState, useEffect } from 'react';
 import { X, CreditCard, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  image: string;
+  prefill: {
+    name: string;
+    email: string;
+  };
+  notes: Record<string, unknown>;
+  theme: {
+    color: string;
+  };
+  handler: (response: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) => void;
+  modal: {
+    ondismiss: () => void;
+  };
+}
+
+interface RazorpayError {
+  description: string;
+}
+
+interface Razorpay {
+  open(): void;
+  on(event: string, handler: (response: { error: RazorpayError }) => void): void;
+}
+
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: new (options: RazorpayOptions) => Razorpay;
   }
 }
 
@@ -22,7 +57,7 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess }: PaymentModalProps) {
-  const { user } = useAuth();
+  const { firebaseUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
@@ -50,7 +85,7 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
   }, [isOpen]);
 
   const handlePayment = async () => {
-    if (!razorpayLoaded || !user) {
+    if (!razorpayLoaded || !firebaseUser) {
       alert('Payment gateway not ready. Please try again.');
       return;
     }
@@ -62,7 +97,7 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${await user.getIdToken()}`,
+          Authorization: `Bearer ${await firebaseUser.getIdToken()}`,
         },
         body: JSON.stringify({ orderId: order._id }),
       });
@@ -83,21 +118,25 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
         description: `Payment for Order #${order._id}`,
         image: '/logo.png', // Add your logo path
         prefill: {
-          name: user.displayName || '',
-          email: user.email || '',
+          name: firebaseUser.displayName || '',
+          email: firebaseUser.email || '',
         },
         notes,
         theme: {
           color: '#2563eb', // Blue color matching your theme
         },
-        handler: async (response: any) => {
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
           try {
             // Verify payment
             const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${await user.getIdToken()}`,
+                Authorization: `Bearer ${await firebaseUser.getIdToken()}`,
               },
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
@@ -126,7 +165,7 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
 
       const rzp = new window.Razorpay(options);
 
-      rzp.on('payment.failed', async (response: any) => {
+      rzp.on('payment.failed', async (response: { error: RazorpayError }) => {
         console.error('Payment failed:', response.error);
 
         // Report payment failure
@@ -135,7 +174,7 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${await user.getIdToken()}`,
+              Authorization: `Bearer ${await firebaseUser.getIdToken()}`,
             },
             body: JSON.stringify({
               razorpay_order_id: orderId,

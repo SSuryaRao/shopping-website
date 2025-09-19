@@ -19,7 +19,7 @@ export default function UnauthorizedPage() {
           Access Denied
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          You don't have permission to access this resource
+          You don&apos;t have permission to access this resource
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export default function UnauthorizedPage() {
               </p>
 
               <ul className="text-sm text-gray-600 list-disc list-inside text-left space-y-1">
-                <li>Verify you're signed in to the correct account</li>
+                <li>Verify you&apos;re signed in to the correct account</li>
                 <li>Check if your account has the required permissions</li>
                 <li>Contact support if you need elevated access</li>
               </ul>

@@ -57,7 +57,7 @@ export default function PendingApprovalPage() {
               <ul className="mt-2 text-sm text-yellow-700 list-disc list-inside text-left space-y-1">
                 <li>Our team will review your application</li>
                 <li>We may contact you for additional information</li>
-                <li>You'll receive an email notification when approved</li>
+                <li>You&apos;ll receive an email notification when approved</li>
                 <li>Typical review time is 1-3 business days</li>
               </ul>
             </div>

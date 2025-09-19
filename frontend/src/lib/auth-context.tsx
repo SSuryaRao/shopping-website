@@ -25,7 +25,7 @@ interface AuthContextType {
       name?: string;
       message?: string;
     };
-  }) => Promise<{ status: string; isAdmin: boolean; message: string; data: any }>;
+  }) => Promise<{ status: string; isAdmin: boolean; message: string; data: unknown }>;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -52,10 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userProfile = await apiClient.getUserProfile();
             console.log('User profile loaded:', userProfile);
             setUser(userProfile);
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error('Error loading user profile:', error);
 
-            if (error.message?.includes('not registered') || error.message?.includes('404')) {
+            if (error instanceof Error && (error.message?.includes('not registered') || error.message?.includes('404'))) {
               // User exists in Firebase but not in our backend
               console.log('User not registered in backend');
 
@@ -77,20 +77,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   const newUserProfile = await apiClient.getUserProfile();
                   setUser(newUserProfile);
                   return; // Exit early on success
-                } catch (registerError: any) {
+                } catch (registerError: unknown) {
                   console.error('Auto-registration failed:', registerError);
                 }
               }
 
               // If not Google user or auto-registration failed
               setUser(null);
-            } else if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+            } else if (error instanceof Error && (error.message?.includes('Failed to fetch') || error.message?.includes('fetch'))) {
               // Network error - backend is not running
               console.warn('Backend server appears to be offline. User can still browse products but cannot access authenticated features.');
               setUser(null);
             } else {
               // Other API errors
-              console.warn('API error, continuing without user profile:', error.message);
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              console.warn('API error, continuing without user profile:', errorMessage);
               setUser(null);
             }
           }
@@ -160,8 +161,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userProfile = await apiClient.getUserProfile();
         console.log('Existing user profile found:', userProfile);
         setUser(userProfile);
-      } catch (error: any) {
-        if (error.message?.includes('not registered') || error.message?.includes('404')) {
+      } catch (error: unknown) {
+        if (error instanceof Error && (error.message?.includes('not registered') || error.message?.includes('404'))) {
           // User needs to be registered in backend - auto-register as customer
           console.log('Auto-registering Google user as customer');
           try {
@@ -178,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Fetch the newly created user profile
             const newUserProfile = await apiClient.getUserProfile();
             setUser(newUserProfile);
-          } catch (registerError: any) {
+          } catch (registerError: unknown) {
             console.error('Auto-registration failed:', registerError);
             // If registration fails, sign out and throw error
             await signOut(auth);

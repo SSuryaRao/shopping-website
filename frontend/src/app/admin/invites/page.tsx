@@ -19,13 +19,13 @@ export default function InvitesPage() {
     expiresInHours: 72,
     note: '',
   });
-  const [generatedToken, setGeneratedToken] = useState<{ token: string; tokenData: any } | null>(null);
+  const [generatedToken, setGeneratedToken] = useState<{ token: string; tokenData: InviteToken } | null>(null);
   const [showToken, setShowToken] = useState(false);
 
   // Tokens and requests
   const [tokens, setTokens] = useState<InviteToken[]>([]);
   const [requests, setRequests] = useState<ShopkeeperRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<ShopkeeperRequest | null>(null);
+  // const [selectedRequest, setSelectedRequest] = useState<ShopkeeperRequest | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function InvitesPage() {
     try {
       const tokensData = await apiClient.getInviteTokens();
       setTokens(tokensData);
-    } catch (error: any) {
+    } catch {
       setError('Failed to load invite tokens');
     }
   };
@@ -48,7 +48,7 @@ export default function InvitesPage() {
     try {
       const requestsData = await apiClient.getShopkeeperRequests();
       setRequests(requestsData);
-    } catch (error: any) {
+    } catch {
       setError('Failed to load shopkeeper requests');
     }
   };
@@ -65,8 +65,8 @@ export default function InvitesPage() {
       setSuccess('Invite token generated successfully!');
       setGenerateForm({ expiresInHours: 72, note: '' });
       await loadTokens();
-    } catch (error: any) {
-      setError(error.message || 'Failed to generate invite token');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to generate invite token');
     } finally {
       setLoading(false);
     }
@@ -78,8 +78,8 @@ export default function InvitesPage() {
       await apiClient.approveShopkeeperRequest(requestId);
       setSuccess('Shopkeeper request approved successfully!');
       await loadRequests();
-    } catch (error: any) {
-      setError(error.message || 'Failed to approve request');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to approve request');
     } finally {
       setActionLoading(null);
     }
@@ -91,8 +91,8 @@ export default function InvitesPage() {
       await apiClient.rejectShopkeeperRequest(requestId, reason);
       setSuccess('Shopkeeper request rejected');
       await loadRequests();
-    } catch (error: any) {
-      setError(error.message || 'Failed to reject request');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to reject request');
     } finally {
       setActionLoading(null);
     }
@@ -140,7 +140,7 @@ export default function InvitesPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'generate' | 'tokens' | 'requests')}
                 className={`flex items-center px-1 py-4 text-sm font-medium border-b-2 ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'

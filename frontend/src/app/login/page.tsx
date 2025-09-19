@@ -33,8 +33,9 @@ export default function LoginPage() {
     try {
       await signIn(formData.email, formData.password);
       router.push('/');
-    } catch (error: any) {
-      setError(error.message || 'Failed to sign in');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -49,9 +50,10 @@ export default function LoginPage() {
       // Don't immediately redirect - let the auth context handle the user state
       // and redirect appropriately
       console.log('Google sign-in completed successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google sign-in error:', error);
-      setError(error.message || 'Failed to sign in with Google');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -185,7 +187,7 @@ export default function LoginPage() {
 
               <div className="text-center">
                 <span className="text-sm text-gray-600">
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
                     Sign up
                   </Link>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api';
 import { Order } from '@/types';
@@ -8,7 +8,7 @@ import { Star, ShoppingBag, Package, Calendar, TrendingUp, Gift, User } from 'lu
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,21 +21,6 @@ export default function DashboardPage() {
     totalPointsEarned: 0,
     currentPoints: 0,
   });
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    } else if (user) {
-      fetchDashboardData();
-    }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && ['overview', 'orders', 'profile'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
 
   const fetchDashboardData = async () => {
     try {
@@ -59,7 +44,7 @@ export default function DashboardPage() {
         totalPointsEarned,
         currentPoints: userProfile?.totalPoints || 0,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching dashboard data:', error);
       // Set default values on error
       setOrders([]);
@@ -73,6 +58,23 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    } else if (user) {
+      fetchDashboardData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, router]); // fetchDashboardData is defined inside this component and should not be in dependencies
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['overview', 'orders', 'profile'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -97,7 +99,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const TabButton = ({ tab, label, icon: Icon }: { tab: string; label: string; icon: any }) => (
+  const TabButton = ({ tab, label, icon: Icon }: { tab: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }) => (
     <button
       onClick={() => setActiveTab(tab)}
       className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all transform hover:scale-105 ${
@@ -565,5 +567,20 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }

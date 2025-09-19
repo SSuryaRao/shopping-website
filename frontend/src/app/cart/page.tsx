@@ -17,7 +17,7 @@ export default function CartPage() {
   const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [currentOrder, setCurrentOrder] = useState<any>(null);
+  const [currentOrder, setCurrentOrder] = useState<{ _id: string; totalPrice: number; pointsEarned: number } | null>(null);
   const router = useRouter();
 
   const subtotal = getSubtotal();

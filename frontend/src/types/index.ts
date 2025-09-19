@@ -11,11 +11,19 @@ export interface User {
 
 export interface InviteToken {
   id: string;
-  createdBy: any;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
   createdAt: Date;
   expiresAt: Date;
   used: boolean;
-  usedBy?: any;
+  usedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   usedAt?: Date;
   note?: string;
   isExpired: boolean;
@@ -29,7 +37,11 @@ export interface ShopkeeperRequest {
   message?: string;
   createdAt: Date;
   status: 'pending' | 'approved' | 'rejected';
-  reviewedBy?: any;
+  reviewedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   reviewedAt?: Date;
   rejectionReason?: string;
 }
