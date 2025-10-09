@@ -28,6 +28,11 @@ router.get('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
         totalPoints: user.totalPoints,
         isAdmin: user.isAdmin,
         isSuperAdmin: user.isSuperAdmin,
+        referralCode: user.referralCode,
+        referredBy: user.referredBy,
+        totalEarnings: user.totalEarnings,
+        pendingWithdrawal: user.pendingWithdrawal,
+        withdrawnAmount: user.withdrawnAmount,
         createdAt: user.createdAt,
       },
     });
@@ -77,6 +82,11 @@ router.put('/profile', authenticateToken, async (req: AuthenticatedRequest, res:
         totalPoints: user.totalPoints,
         isAdmin: user.isAdmin,
         isSuperAdmin: user.isSuperAdmin,
+        referralCode: user.referralCode,
+        referredBy: user.referredBy,
+        totalEarnings: user.totalEarnings,
+        pendingWithdrawal: user.pendingWithdrawal,
+        withdrawnAmount: user.withdrawnAmount,
         createdAt: user.createdAt,
       },
     });

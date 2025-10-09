@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Mail, Lock, User, Eye, EyeOff, UserCog, ShoppingCart, Key, MessageSquare } from 'lucide-react';
 
-export default function SignUpPage() {
+function SignUpForm() {
   const { signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,6 +18,7 @@ export default function SignUpPage() {
     role: 'customer' as 'customer' | 'shopkeeper',
     inviteToken: '',
     message: '',
+    referralCode: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,6 +26,14 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // const [registrationResult, setRegistrationResult] = useState<unknown>(null);
+
+  // Check for referral code in URL on component mount
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setFormData((prev) => ({ ...prev, referralCode: refCode.toUpperCase() }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,23 +57,27 @@ export default function SignUpPage() {
       const result = await signUp(formData.email, formData.password, {
         role: formData.role,
         inviteToken: formData.inviteToken || undefined,
+        referralCode: formData.referralCode || undefined,
         profile: {
           name: formData.name,
           message: formData.message || undefined,
         },
       });
 
-      // setRegistrationResult(result);
+      console.log('Registration result:', result);
 
       if (result.status === 'approved') {
-        setSuccess(result.message);
+        setSuccess(result.message + ' Redirecting...');
         setTimeout(() => {
           router.push(result.isAdmin ? '/admin' : '/dashboard');
         }, 2000);
       } else if (result.status === 'pending') {
-        setSuccess(result.message);
+        setSuccess(result.message + ' You can close this page or sign in to check your status.');
+      } else {
+        setError('Registration completed but status is unclear. Please try logging in.');
       }
     } catch (error: unknown) {
+      console.error('Registration error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
       setError(errorMessage);
     } finally {
@@ -185,6 +199,17 @@ export default function SignUpPage() {
               </div>
             </div>
 
+            {formData.referralCode && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  <strong>Referral Code Applied:</strong> {formData.referralCode}
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  You will join the network of the person who referred you!
+                </p>
+              </div>
+            )}
+
             <div>
               <label htmlFor="name" className="sr-only">
                 Full name
@@ -228,6 +253,33 @@ export default function SignUpPage() {
                 />
               </div>
             </div>
+
+            {/* Referral Code Input - Only show for customer accounts and if not already set from URL */}
+            {formData.role === 'customer' && !searchParams.get('ref') && (
+              <div>
+                <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  Referral Code (Optional)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Key className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="referralCode"
+                    name="referralCode"
+                    type="text"
+                    value={formData.referralCode}
+                    onChange={(e) => setFormData({ ...formData, referralCode: e.target.value.toUpperCase() })}
+                    className="appearance-none relative block w-full pl-10 px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm uppercase"
+                    placeholder="Enter referral code (e.g., ABC12345)"
+                    maxLength={8}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Have a referral code? Enter it to join someone&apos;s MLM network.
+                </p>
+              </div>
+            )}
 
             <div>
               <label htmlFor="password" className="sr-only">
@@ -402,5 +454,17 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-lg">Loading...</div>
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
   );
 }

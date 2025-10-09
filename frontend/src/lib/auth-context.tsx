@@ -21,6 +21,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, registrationData: {
     role: 'customer' | 'shopkeeper';
     inviteToken?: string;
+    referralCode?: string;
     profile?: {
       name?: string;
       message?: string;

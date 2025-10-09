@@ -2,10 +2,17 @@ import { Router, Response } from 'express';
 import mongoose from 'mongoose';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import Order from '../models/Order';
-import Product from '../models/Product';
+import Product, { IProduct } from '../models/Product';
 import User from '../models/User';
 
 const router = Router();
+
+interface OrderItemData {
+  product: IProduct;
+  quantity: number;
+  itemTotal: number;
+  itemPoints: number;
+}
 
 // Create order (single product or cart)
 router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
@@ -44,7 +51,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
 
     let subtotal = 0;
     let totalPointsEarned = 0;
-    const orderItems = [];
+    const orderItems: OrderItemData[] = [];
 
     // Validate each item and calculate totals
     for (const item of items) {
@@ -93,7 +100,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       totalPointsEarned += itemPoints;
 
       orderItems.push({
-        product,
+        product: product as IProduct,
         quantity,
         itemTotal,
         itemPoints,
@@ -117,47 +124,41 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
         quantity: item.quantity,
         totalPrice: itemFinalPrice,
         pointsEarned: item.itemPoints,
-        status: 'completed', // For simplicity, mark as completed immediately
+        status: 'pending',
+        paymentStatus: 'pending',
       });
 
       await order.save({ session });
       createdOrders.push(order);
 
-      // Update product stock
-      await Product.findByIdAndUpdate(
-        item.product._id,
-        { $inc: { stock: -item.quantity } },
+      // Don't update stock or points yet - wait for payment
+    }
+
+    // Deduct redeemed points immediately (but don't add earned points yet)
+    if (pointsToRedeem > 0) {
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { $inc: { totalPoints: -pointsToRedeem } },
         { session }
       );
     }
 
-    // Update user points (add earned points, subtract redeemed points)
-    const pointsChange = totalPointsEarned - pointsToRedeem;
-    await User.findByIdAndUpdate(
-      req.user._id,
-      { $inc: { totalPoints: pointsChange } },
-      { session }
-    );
-
     await session.commitTransaction();
+    session.endSession();
 
-    // Populate product details for response
-    const populatedOrders = await Order.find({
-      _id: { $in: createdOrders.map(o => o._id) },
-    })
-      .populate('productId', 'name imageURL price points')
-      .lean();
+    // MLM commissions will be distributed after payment verification
 
-    const responseData = populatedOrders.map(order => ({
-      ...order,
-      product: order.productId,
-    }));
+    // Return first order for payment modal (simplified for single-order payment flow)
+    const firstOrder = createdOrders[0];
 
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
       data: {
-        orders: responseData,
+        _id: firstOrder._id,
+        totalPrice: finalTotal,
+        pointsEarned: totalPointsEarned,
+        orders: createdOrders.map(o => o._id),
         summary: {
           subtotal,
           pointsRedeemed: pointsToRedeem,
@@ -168,14 +169,18 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       },
     });
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     console.error('Create order error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
     });
   } finally {
-    session.endSession();
+    if (session) {
+      session.endSession();
+    }
   }
 });
 

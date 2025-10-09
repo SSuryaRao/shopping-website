@@ -285,4 +285,70 @@ router.delete('/products/:id', authenticateToken, requireAdmin, async (req: Auth
   }
 });
 
+// Get all orders (only paid orders)
+router.get('/orders', authenticateToken, requireAdmin, async (_req: AuthenticatedRequest, res: Response): Promise<any> => {
+  try {
+    const Order = (await import('../models/Order')).default;
+
+    const orders = await Order.find({ paymentStatus: 'paid' })
+      .populate('userId', 'name email')
+      .populate('productId', 'name imageURL price')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+});
+
+// Update order status
+router.patch('/orders/:id/status', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+  try {
+    const Order = (await import('../models/Order')).default;
+    const { status } = req.body;
+
+    if (!status || !['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status',
+      });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    )
+      .populate('userId', 'name email')
+      .populate('productId', 'name imageURL price');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: order,
+    });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+});
+
 export default router;

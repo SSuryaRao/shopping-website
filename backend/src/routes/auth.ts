@@ -1,9 +1,11 @@
 import { Router, Response } from 'express';
+import mongoose from 'mongoose';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { getAuth } from '../utils/firebase';
 import User from '../models/User';
 import ShopkeeperRequest from '../models/ShopkeeperRequest';
 import { isValidInviteToken, markTokenAsUsed, setFirebaseCustomClaims } from '../utils/auth';
+import { generateReferralCode, addUserToMLMTree } from '../services/mlm.service';
 
 const router = Router();
 
@@ -30,7 +32,7 @@ router.post('/register', async (req, res) => {
     }
 
     const decodedToken = await auth.verifyIdToken(token);
-    const { role = 'customer', inviteToken, profile = {} } = req.body;
+    const { role = 'customer', inviteToken, profile = {}, referralCode: referralCodeFromSignup } = req.body;
 
     // Check if user already exists
     let existingUser = await User.findOne({ firebaseUid: decodedToken.uid });
@@ -45,11 +47,18 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    // Generate unique referral code for new user
+    const userReferralCode = await generateReferralCode();
+
     const userData = {
       firebaseUid: decodedToken.uid,
       email: decodedToken.email!,
       name: profile.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'User',
       totalPoints: 0,
+      totalEarnings: 0,
+      pendingWithdrawal: 0,
+      withdrawnAmount: 0,
+      referralCode: userReferralCode,
       role: 'customer', // Default, will be updated based on logic below
       isAdmin: false,
       isSuperAdmin: false,
@@ -84,6 +93,11 @@ router.post('/register', async (req, res) => {
           // Set Firebase custom claims
           await setFirebaseCustomClaims(user.firebaseUid, { isAdmin: true });
 
+          // Add to MLM tree if referral code provided
+          if (referralCodeFromSignup) {
+            await addUserToMLMTree(user._id as mongoose.Types.ObjectId, referralCodeFromSignup);
+          }
+
           return res.json({
             success: true,
             status: 'approved',
@@ -93,6 +107,7 @@ router.post('/register', async (req, res) => {
               userId: user._id,
               role: user.role,
               isAdmin: user.isAdmin,
+              referralCode: user.referralCode,
             },
           });
         } else {
@@ -161,6 +176,11 @@ router.post('/register', async (req, res) => {
         await setFirebaseCustomClaims(user.firebaseUid, { isAdmin: true, isSuperAdmin: userData.isSuperAdmin });
       }
 
+      // Add to MLM tree if referral code provided
+      if (referralCodeFromSignup) {
+        await addUserToMLMTree(user._id as mongoose.Types.ObjectId, referralCodeFromSignup);
+      }
+
       return res.json({
         success: true,
         status: 'approved',
@@ -171,6 +191,7 @@ router.post('/register', async (req, res) => {
           role: user.role,
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin,
+          referralCode: user.referralCode,
         },
       });
     }

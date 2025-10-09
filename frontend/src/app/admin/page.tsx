@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api';
 import { Product } from '@/types';
-import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, UserPlus } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, UserPlus, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -87,8 +87,15 @@ export default function AdminPage() {
             <p className="text-gray-600 mt-2">Manage your products and monitor your business</p>
           </div>
 
-          {user?.isSuperAdmin && (
-            <div className="flex space-x-4">
+          <div className="flex space-x-4">
+            <Link
+              href="/admin/orders"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Manage Orders
+            </Link>
+            {user?.isSuperAdmin && (
               <Link
                 href="/admin/invites"
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -96,8 +103,8 @@ export default function AdminPage() {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Manage Invites
               </Link>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

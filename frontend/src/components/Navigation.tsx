@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
-import { ShoppingBag, User, LogOut, Settings, Star, ShoppingCart, Menu, X, Home, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Settings, Star, ShoppingCart, Menu, X, Home, LayoutDashboard, Network } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Navigation() {
@@ -103,6 +103,10 @@ export default function Navigation() {
                   <Link href="/dashboard" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
+                  </Link>
+                  <Link href="/mlm" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
+                    <Network className="h-4 w-4" />
+                    <span>MLM</span>
                   </Link>
                   {user?.isAdmin && (
                     <Link href="/admin" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
@@ -310,6 +314,20 @@ export default function Navigation() {
                     <div>
                       <span className="font-bold text-gray-900">Dashboard</span>
                       <p className="text-sm text-gray-500">View your stats & orders</p>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/mlm"
+                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
+                    onClick={closeMobileMenu}
+                  >
+                    <div className="p-2 rounded-xl bg-indigo-100">
+                      <Network className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-900">MLM Network</span>
+                      <p className="text-sm text-gray-500">Referrals & commissions</p>
                     </div>
                   </Link>
 

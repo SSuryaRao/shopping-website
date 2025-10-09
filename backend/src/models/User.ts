@@ -8,6 +8,14 @@ export interface IUser extends Document {
   role: 'customer' | 'shopkeeper' | 'pending';
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  // MLM fields
+  referredBy?: mongoose.Types.ObjectId;
+  leftChild?: mongoose.Types.ObjectId;
+  rightChild?: mongoose.Types.ObjectId;
+  totalEarnings: number;
+  pendingWithdrawal: number;
+  withdrawnAmount: number;
+  referralCode: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +56,40 @@ const userSchema = new Schema<IUser>(
     isSuperAdmin: {
       type: Boolean,
       default: false,
+    },
+    // MLM fields
+    referredBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    leftChild: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    rightChild: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    pendingWithdrawal: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    withdrawnAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
   },
   {

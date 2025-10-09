@@ -1,6 +1,7 @@
 import express from 'express';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { verifyToken, AuthenticatedRequest } from '../middleware/auth';
 import Order from '../models/Order';
 import Payment from '../models/Payment';
@@ -73,7 +74,7 @@ router.post('/create-order', verifyToken, async (req: AuthenticatedRequest, res)
     const razorpayOrderOptions = {
       amount: Math.round(order.totalPrice * 100), // Convert to paise
       currency: 'INR',
-      receipt: `order_${orderId}_${Date.now()}`,
+      receipt: `rcpt_${Date.now()}`, // Keep under 40 chars
       notes: {
         orderId: orderId.toString(),
         userId: req.user?.firebaseUid,
@@ -163,26 +164,34 @@ router.post('/verify-payment', verifyToken, async (req: AuthenticatedRequest, re
     payment.status = 'captured';
     await payment.save();
 
-    // Update order status
+    // Update order status and process payment
     const order = await Order.findById(payment.orderId).populate('productId userId');
     if (order) {
       order.paymentStatus = 'paid';
-      order.status = 'processing';
+      order.status = 'completed'; // Changed from 'processing' to 'completed'
       await order.save();
 
-      // Update product stock
-      const product = await Product.findById(order.productId);
-      if (product) {
-        product.stock = Math.max(0, product.stock - order.quantity);
-        await product.save();
-      }
+      // Update product stock (use findByIdAndUpdate to avoid validation issues)
+      const product = await Product.findByIdAndUpdate(
+        order.productId,
+        { $inc: { stock: -order.quantity } },
+        { new: true }
+      );
 
-      // Update user points
+      // Update user points (add earned points)
       const user = await User.findById(order.userId);
       if (user) {
         user.totalPoints += order.pointsEarned;
         await user.save();
       }
+
+      // Distribute MLM commissions
+      const { distributeCommissions } = await import('../services/mlm.service');
+      await distributeCommissions(
+        order._id as mongoose.Types.ObjectId,
+        order.userId as mongoose.Types.ObjectId,
+        product as any
+      );
     }
 
     return res.json({

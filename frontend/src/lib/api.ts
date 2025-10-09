@@ -62,15 +62,43 @@ export class ApiClient {
   async register(registrationData: {
     role: 'customer' | 'shopkeeper';
     inviteToken?: string;
+    referralCode?: string;
     profile?: {
       name?: string;
       message?: string;
     };
   }) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(registrationData),
-    });
+    // For register, we need the full response, not just data
+    const url = `${this.baseURL}/auth/register`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(registrationData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      // Return full response including status, message, etc.
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Unable to connect to server. Please check if the backend is running.');
+      }
+      throw error;
+    }
   }
 
   // Product methods
@@ -183,6 +211,18 @@ export class ApiClient {
 
     const query = searchParams.toString();
     return this.request(`/admin/all-requests${query ? `?${query}` : ''}`);
+  }
+
+  // Admin order methods
+  async getAllOrders() {
+    return this.request('/admin/orders');
+  }
+
+  async updateOrderStatus(orderId: string, status: string) {
+    return this.request(`/admin/orders/${orderId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
   }
 }
 

@@ -1,8 +1,11 @@
+import dotenv from 'dotenv';
+// Load environment variables FIRST before any other imports
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import path from 'path';
 
@@ -13,8 +16,7 @@ import orderRoutes from './routes/orders';
 import adminRoutes from './routes/admin';
 import inviteRoutes from './routes/invite';
 import paymentRoutes from './routes/payments';
-
-dotenv.config();
+import mlmRoutes from './routes/mlm';
 
 console.log('🚀 Starting server...');
 
@@ -85,7 +87,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit for development
   message: 'Too many requests from this IP, please try again later.',
 });
 app.use('/api', limiter);
@@ -136,6 +138,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', inviteRoutes);
+app.use('/api/mlm', mlmRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

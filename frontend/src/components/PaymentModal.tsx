@@ -103,7 +103,8 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create payment order');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create payment order');
       }
 
       const { orderId, amount, currency, key, notes } = await response.json();
@@ -266,10 +267,39 @@ export default function PaymentModal({ isOpen, onClose, order, onPaymentSuccess 
           </button>
         </div>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center space-y-2">
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
             <span>🔒</span>
             <span>Payments are secured by Razorpay</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            By proceeding, you agree to our{' '}
+            <a
+              href="https://merchant.razorpay.com/policy/RIwRkvOb19eD9N/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              Terms
+            </a>
+            ,{' '}
+            <a
+              href="https://merchant.razorpay.com/policy/RIwRkvOb19eD9N/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              Privacy
+            </a>
+            {' '}&{' '}
+            <a
+              href="https://merchant.razorpay.com/policy/RIwRkvOb19eD9N/refund"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              Refund Policy
+            </a>
           </div>
         </div>
       </div>
