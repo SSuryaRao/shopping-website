@@ -62,7 +62,7 @@ export default function ProductCommissionPage() {
       return;
     }
 
-    setCommissionStructure([...commissionStructure, { level: nextLevel, amount: 0 }]);
+    setCommissionStructure([...commissionStructure, { level: nextLevel, points: 0 }]);
   };
 
   const removeLevel = (index: number) => {
@@ -72,20 +72,18 @@ export default function ProductCommissionPage() {
     setCommissionStructure(reindexed);
   };
 
-  const updateAmount = (index: number, amount: number) => {
+  const updatePoints = (index: number, points: number) => {
     const newStructure = [...commissionStructure];
-    newStructure[index].amount = Math.max(0, amount);
+    newStructure[index].points = Math.max(0, points);
     setCommissionStructure(newStructure);
   };
 
   const calculateTotals = () => {
-    if (!product) return { totalCommission: 0, profitMargin: 0, availableProfit: 0 };
+    if (!product) return { totalCommissionPoints: 0 };
 
-    const totalCommission = commissionStructure.reduce((sum, level) => sum + level.amount, 0);
-    const availableProfit = product.price - product.cost;
-    const profitMargin = availableProfit - totalCommission;
+    const totalCommissionPoints = commissionStructure.reduce((sum, level) => sum + level.points, 0);
 
-    return { totalCommission, profitMargin, availableProfit };
+    return { totalCommissionPoints };
   };
 
   const handleSave = async () => {
@@ -93,13 +91,6 @@ export default function ProductCommissionPage() {
       setSaving(true);
       setError('');
       setSuccess('');
-
-      const { totalCommission, availableProfit } = calculateTotals();
-
-      if (totalCommission > availableProfit) {
-        setError(`Total commission (₹${totalCommission}) exceeds available profit (₹${availableProfit})`);
-        return;
-      }
 
       const token = await (await import('@/lib/firebase')).auth.currentUser?.getIdToken();
 
@@ -130,7 +121,7 @@ export default function ProductCommissionPage() {
     }
   };
 
-  const { totalCommission, profitMargin, availableProfit } = calculateTotals();
+  const { totalCommissionPoints } = calculateTotals();
 
   if (loading) {
     return (
@@ -160,7 +151,7 @@ export default function ProductCommissionPage() {
         </button>
 
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">MLM Commission Structure</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">MLM Points Distribution</h1>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-600">Product:</p>
@@ -175,8 +166,8 @@ export default function ProductCommissionPage() {
               <p className="font-semibold">₹{product.cost}</p>
             </div>
             <div>
-              <p className="text-gray-600">Available Profit:</p>
-              <p className="font-semibold text-green-600">₹{availableProfit}</p>
+              <p className="text-gray-600">Product Points:</p>
+              <p className="font-semibold text-yellow-600">{product.points} pts</p>
             </div>
           </div>
         </div>
@@ -222,17 +213,17 @@ export default function ProductCommissionPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Commission Amount (₹)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Commission Points</label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-500 font-bold">★</span>
                       <input
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
-                        value={level.amount}
-                        onChange={(e) => updateAmount(index, parseFloat(e.target.value) || 0)}
+                        value={level.points}
+                        onChange={(e) => updatePoints(index, parseInt(e.target.value) || 0)}
                         className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="0.00"
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -249,23 +240,11 @@ export default function ProductCommissionPage() {
         </div>
 
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Summary</h3>
+          <h3 className="text-lg font-semibold mb-4">Points Distribution Summary</h3>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Commission Distribution:</span>
-              <span className="font-semibold">₹{totalCommission.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Your Profit Margin:</span>
-              <span className={`font-semibold ${profitMargin < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                ₹{profitMargin.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between pt-2 border-t">
-              <span className="text-gray-600">Profit Percentage:</span>
-              <span className="font-semibold">
-                {((profitMargin / product.price) * 100).toFixed(2)}%
-              </span>
+              <span className="text-gray-600">Total Commission Points:</span>
+              <span className="font-semibold text-yellow-600">{totalCommissionPoints} pts</span>
             </div>
           </div>
         </div>
@@ -273,11 +252,11 @@ export default function ProductCommissionPage() {
         <div className="flex gap-4">
           <button
             onClick={handleSave}
-            disabled={saving || totalCommission > availableProfit}
+            disabled={saving}
             className="flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5 mr-2" />
-            {saving ? 'Saving...' : 'Save Commission Structure'}
+            {saving ? 'Saving...' : 'Save Points Distribution'}
           </button>
           <button
             onClick={() => router.back()}

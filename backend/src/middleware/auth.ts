@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { getAuth } from '../utils/firebase';
 import User from '../models/User';
+import jwt from 'jsonwebtoken';
 
 export interface AuthenticatedRequest extends Request {
   user?: any;
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export const authenticateToken = async (
   req: AuthenticatedRequest,
@@ -12,18 +15,6 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Check if Firebase is initialized
-    const auth = getAuth();
-    console.log('Firebase Auth status:', auth ? 'Available' : 'Not available');
-    if (!auth) {
-      console.log('Firebase Admin SDK not initialized when auth middleware called');
-      res.status(500).json({
-        success: false,
-        message: 'Authentication service not configured',
-      });
-      return;
-    }
-
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -35,22 +26,64 @@ export const authenticateToken = async (
       return;
     }
 
-    // Verify Firebase token
-    const decodedToken = await auth.verifyIdToken(token);
+    // Try to verify as JWT first (for mobile/email login)
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; uniqueUserId: string };
 
-    // Find user in database (don't auto-create here - let registration endpoint handle it)
-    const user = await User.findOne({ firebaseUid: decodedToken.uid });
+      // Find user by MongoDB ID
+      const user = await User.findById(decoded.userId);
 
-    if (!user) {
-      res.status(401).json({
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not found',
+        });
+        return;
+      }
+
+      req.user = user;
+      next();
+      return;
+    } catch (jwtError) {
+      // If JWT verification fails, try Firebase token
+      console.log('JWT verification failed, trying Firebase token...');
+    }
+
+    // Fallback to Firebase token verification (for Google login)
+    const auth = getAuth();
+    if (!auth) {
+      console.log('Firebase Admin SDK not initialized');
+      res.status(500).json({
         success: false,
-        message: 'User not registered. Please complete registration first.',
+        message: 'Authentication service not configured',
       });
       return;
     }
 
-    req.user = user;
-    next();
+    try {
+      const decodedToken = await auth.verifyIdToken(token);
+
+      // Find user in database by Firebase UID
+      const user = await User.findOne({ firebaseUid: decodedToken.uid });
+
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not registered. Please complete registration first.',
+        });
+        return;
+      }
+
+      req.user = user;
+      next();
+    } catch (firebaseError) {
+      console.error('Firebase token verification failed:', firebaseError);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+      });
+      return;
+    }
   } catch (error) {
     console.error('Authentication error:', error);
     res.status(401).json({

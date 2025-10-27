@@ -314,10 +314,10 @@ router.put(
 
       // Validate commission structure
       for (const level of commissionStructure) {
-        if (!level.level || !level.amount || level.level < 1 || level.level > 20 || level.amount < 0) {
+        if (!level.level || level.points === undefined || level.level < 1 || level.level > 20 || level.points < 0) {
           return res.status(400).json({
             success: false,
-            message: 'Invalid commission structure. Each level must have level (1-20) and amount (>= 0)',
+            message: 'Invalid commission structure. Each level must have level (1-20) and points (>= 0)',
           });
         }
       }
@@ -331,21 +331,6 @@ router.put(
         });
       }
 
-      // Calculate total commission
-      const totalCommission = commissionStructure.reduce(
-        (sum, level) => sum + level.amount,
-        0
-      );
-
-      // Check if total commission exceeds available profit
-      const availableProfit = product.price - product.cost;
-      if (totalCommission > availableProfit) {
-        return res.status(400).json({
-          success: false,
-          message: `Total commission (${totalCommission}) exceeds available profit (${availableProfit})`,
-        });
-      }
-
       // Update product
       product.commissionStructure = commissionStructure;
       await product.save(); // This will trigger the pre-save hook to calculate totals
@@ -356,8 +341,7 @@ router.put(
         data: {
           productId: product._id,
           commissionStructure: product.commissionStructure,
-          totalCommission: product.totalCommission,
-          profitMargin: product.profitMargin,
+          totalCommissionPoints: product.totalCommissionPoints,
         },
       });
     } catch (error) {
@@ -396,9 +380,8 @@ router.get(
           price: product.price,
           cost: product.cost,
           commissionStructure: product.commissionStructure,
-          totalCommission: product.totalCommission,
-          profitMargin: product.profitMargin,
-          availableProfit: product.price - product.cost,
+          buyerRewardPoints: product.buyerRewardPoints,
+          totalCommissionPoints: product.totalCommissionPoints,
         },
       });
     } catch (error) {

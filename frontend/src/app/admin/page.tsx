@@ -321,11 +321,17 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
     name: product?.name || '',
     description: product?.description || '',
     price: product?.price || 0,
+    cost: product?.cost || 0,
     points: product?.points || 0,
     stock: product?.stock || 0,
     category: product?.category || '',
     isActive: product?.isActive ?? true,
   });
+  const [buyerRewardPoints, setBuyerRewardPoints] = useState(product?.buyerRewardPoints || 0);
+  const [uplineCommissionPoints, setUplineCommissionPoints] = useState(
+    product?.commissionStructure?.[0]?.points || 0
+  );
+  const [useManualDistribution, setUseManualDistribution] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(product?.imageURL || null);
   const [loading, setLoading] = useState(false);
@@ -346,6 +352,25 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
     }
   };
 
+  const calculateTotals = () => {
+    if (useManualDistribution) {
+      // Manual distribution mode
+      const totalCommissionPoints = uplineCommissionPoints * 19; // 19 levels, same points each
+      const totalDistributionPoints = totalCommissionPoints + buyerRewardPoints;
+      return { totalCommissionPoints, buyerRewardPoints, totalDistributionPoints };
+    } else {
+      // Auto distribution mode: 2% each for buyer and 19 upline members
+      const autoPointsPerPerson = Math.floor(formData.points * 0.02);
+      const totalCommissionPoints = autoPointsPerPerson * 19;
+      const totalDistributionPoints = totalCommissionPoints + autoPointsPerPerson;
+      return {
+        totalCommissionPoints,
+        buyerRewardPoints: autoPointsPerPerson,
+        totalDistributionPoints
+      };
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -356,6 +381,24 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
       Object.entries(formData).forEach(([key, value]) => {
         formDataToSend.append(key, value.toString());
       });
+
+      // Use auto-calculated or manual values based on toggle
+      const finalBuyerPoints = useManualDistribution
+        ? buyerRewardPoints
+        : Math.floor(formData.points * 0.02);
+
+      const finalUplinePoints = useManualDistribution
+        ? uplineCommissionPoints
+        : Math.floor(formData.points * 0.02);
+
+      formDataToSend.append('buyerRewardPoints', finalBuyerPoints.toString());
+
+      // Create commission structure for 19 levels with the same points
+      const commissionStructure = Array.from({ length: 19 }, (_, i) => ({
+        level: i + 1,
+        points: finalUplinePoints
+      }));
+      formDataToSend.append('commissionStructure', JSON.stringify(commissionStructure));
 
       if (imageFile) {
         formDataToSend.append('image', imageFile);
@@ -495,6 +538,27 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Cost ($) *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={formData.cost}
+                    onChange={(e) => setFormData({...formData, cost: parseFloat(e.target.value) || 0})}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
                   Reward Points *
                 </label>
                 <div className="relative">
@@ -550,6 +614,126 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* MLM Commission Structure */}
+              <div className="md:col-span-2 bg-indigo-50 rounded-xl p-6 border-2 border-indigo-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-bold text-indigo-900">MLM Points Distribution</h4>
+
+                  {/* Toggle Button */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-700">
+                      {useManualDistribution ? 'Manual' : 'Auto (2% each)'}
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useManualDistribution}
+                        onChange={(e) => setUseManualDistribution(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {!useManualDistribution && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Auto Distribution:</strong> Each recipient (1 buyer + 19 upline members) will automatically receive 2% of the total reward points.
+                    </p>
+                  </div>
+                )}
+
+                {/* Buyer Reward */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Buyer Reward Points - Points the buyer gets when they purchase
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-yellow-500 font-bold text-lg">★</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={useManualDistribution ? buyerRewardPoints : Math.floor(formData.points * 0.02)}
+                      onChange={(e) => setBuyerRewardPoints(parseInt(e.target.value) || 0)}
+                      disabled={!useManualDistribution}
+                      className={`w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500 ${
+                        useManualDistribution ? 'bg-white' : 'bg-gray-100 cursor-not-allowed'
+                      }`}
+                      placeholder="0"
+                    />
+                  </div>
+                  {!useManualDistribution && (
+                    <p className="text-xs text-indigo-600 mt-1">
+                      Auto-calculated: {formData.points} × 2% = {Math.floor(formData.points * 0.02)} points
+                    </p>
+                  )}
+                </div>
+
+                {/* Upline Commission Points */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Upline Commission per Level (Points) - Applied to all 19 levels
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-yellow-500 font-bold text-lg">★</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={useManualDistribution ? uplineCommissionPoints : Math.floor(formData.points * 0.02)}
+                      onChange={(e) => setUplineCommissionPoints(parseInt(e.target.value) || 0)}
+                      disabled={!useManualDistribution}
+                      className={`w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500 ${
+                        useManualDistribution ? 'bg-white' : 'bg-gray-100 cursor-not-allowed'
+                      }`}
+                      placeholder="0"
+                    />
+                  </div>
+                  {useManualDistribution ? (
+                    <p className="text-xs text-gray-600 mt-1">
+                      These points will be distributed to each of the 19 upline levels
+                    </p>
+                  ) : (
+                    <p className="text-xs text-indigo-600 mt-1">
+                      Auto-calculated: {formData.points} × 2% = {Math.floor(formData.points * 0.02)} points per level
+                    </p>
+                  )}
+                </div>
+
+                {/* Summary */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h5 className="text-sm font-semibold mb-2">Points Distribution Summary</h5>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Buyer Reward:</span>
+                      <span className="font-semibold text-yellow-600">{calculateTotals().buyerRewardPoints} pts</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Upline Commission (19 levels × {useManualDistribution ? uplineCommissionPoints : Math.floor(formData.points * 0.02)}):
+                      </span>
+                      <span className="font-semibold text-yellow-600">{calculateTotals().totalCommissionPoints} pts</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1">
+                      <span className="text-gray-600">Total Points Distribution:</span>
+                      <span className="font-semibold text-indigo-600">{calculateTotals().totalDistributionPoints} pts</span>
+                    </div>
+                    {!useManualDistribution && (
+                      <div className="flex justify-between text-xs text-gray-500 pt-1">
+                        <span>Percentage of total rewards:</span>
+                        <span>{formData.points > 0 ? ((calculateTotals().totalDistributionPoints / formData.points) * 100).toFixed(1) : 0}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="md:col-span-2">

@@ -1,7 +1,12 @@
 export interface User {
   id: string;
-  email: string;
+  uniqueUserId: string; // Unique profile ID (USR123456)
+  firebaseUid?: string; // Firebase authentication ID (optional for backwards compatibility)
+  email?: string;
+  mobileNumber?: string;
   name: string;
+  profileName?: string; // Profile display name (e.g., "Main Account", "Business")
+  displayName?: string; // Legacy field for backwards compatibility
   role: 'customer' | 'shopkeeper' | 'pending';
   totalPoints: number;
   isAdmin?: boolean;
@@ -14,7 +19,55 @@ export interface User {
   pendingWithdrawal: number;
   withdrawnAmount: number;
   referralCode?: string;
-  createdAt: Date;
+  createdAt?: Date;
+}
+
+// Profile selector types
+export interface ProfileOption {
+  uniqueUserId: string;
+  profileName: string;
+  name: string;
+  role: 'customer' | 'shopkeeper' | 'pending';
+  totalPoints: number;
+  isAdmin: boolean;
+  isCurrent?: boolean;
+}
+
+// Legacy - keeping for backwards compatibility
+export interface AccountOption {
+  uniqueUserId: string;
+  displayName: string;
+  name: string;
+  role: 'customer' | 'shopkeeper' | 'pending';
+  totalPoints: number;
+  isAdmin: boolean;
+}
+
+export interface MultiAccountResponse {
+  success: true;
+  requiresSelection: true;
+  accounts: AccountOption[];
+  tempToken: string;
+}
+
+export interface SingleAccountResponse {
+  success: true;
+  token: string;
+  user: User;
+}
+
+export type LoginResponse = MultiAccountResponse | SingleAccountResponse;
+
+// Registration types
+export interface RegistrationData {
+  registrationType: 'mobile' | 'email' | 'google';
+  mobileNumber?: string;
+  email?: string;
+  password?: string;
+  name: string;
+  displayName?: string;
+  role: 'customer' | 'shopkeeper';
+  referralCode?: string;
 }
 
 export interface InviteToken {
@@ -56,7 +109,7 @@ export interface ShopkeeperRequest {
 
 export interface CommissionLevel {
   level: number;
-  amount: number;
+  points: number;
 }
 
 export interface Product {
@@ -72,8 +125,8 @@ export interface Product {
   isActive: boolean;
   // MLM fields
   commissionStructure: CommissionLevel[];
-  totalCommission: number;
-  profitMargin: number;
+  buyerRewardPoints: number;
+  totalCommissionPoints: number;
   createdAt: Date;
 }
 

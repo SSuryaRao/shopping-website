@@ -1,9 +1,14 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUser extends Document {
-  firebaseUid: string;
-  email: string;
-  name: string;
+  firebaseUid?: string; // Firebase authentication ID (optional for backwards compatibility)
+  uniqueUserId: string; // Unique profile identifier (USR123456)
+  email?: string; // Email from Firebase Auth
+  mobileNumber?: string; // Phone from Firebase Auth
+  name: string; // User's real name
+  profileName?: string; // Profile display name like "Main Account", "Business Account"
+  displayName?: string; // Legacy field - kept for backwards compatibility
+  password?: string; // Legacy field - hashed password for old auth system
   totalPoints: number;
   role: 'customer' | 'shopkeeper' | 'pending';
   isAdmin: boolean;
@@ -16,6 +21,7 @@ export interface IUser extends Document {
   pendingWithdrawal: number;
   withdrawnAmount: number;
   referralCode: string;
+  lastLoginAt?: Date; // Track last login for analytics
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,20 +30,43 @@ const userSchema = new Schema<IUser>(
   {
     firebaseUid: {
       type: String,
-      required: true,
-      unique: true,
+      sparse: true, // Sparse index allows multiple null/undefined values
     },
-    email: {
+    uniqueUserId: {
       type: String,
       required: true,
       unique: true,
+      uppercase: true,
+      trim: true,
+    },
+    email: {
+      type: String,
       lowercase: true,
       trim: true,
+      index: true,
+    },
+    mobileNumber: {
+      type: String,
+      trim: true,
+      index: true,
     },
     name: {
       type: String,
       required: true,
       trim: true,
+    },
+    profileName: {
+      type: String,
+      trim: true,
+      default: 'Main Account',
+    },
+    displayName: {
+      type: String,
+      trim: true,
+    },
+    password: {
+      type: String,
+      select: false, // Don't return password in queries by default
     },
     totalPoints: {
       type: Number,
@@ -91,10 +120,30 @@ const userSchema = new Schema<IUser>(
       unique: true,
       sparse: true,
     },
+    lastLoginAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Sparse unique index on firebaseUid - allows multiple null values but unique non-null values
+userSchema.index({ firebaseUid: 1 }, { unique: true, sparse: true });
+
+// Compound indexes for efficient multi-profile queries
+userSchema.index({ firebaseUid: 1, uniqueUserId: 1 }); // Find all profiles for a Firebase user
+userSchema.index({ mobileNumber: 1, uniqueUserId: 1 }); // Legacy mobile auth
+userSchema.index({ email: 1, uniqueUserId: 1 }); // Legacy email auth
+
+// Validation: Must have at least one identifier
+userSchema.pre('validate', function (next) {
+  if (!this.email && !this.mobileNumber && !this.firebaseUid) {
+    next(new Error('User must have at least one identifier: email, mobile number, or Firebase UID'));
+  } else {
+    next();
+  }
+});
 
 export default mongoose.model<IUser>('User', userSchema);

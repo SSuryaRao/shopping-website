@@ -135,7 +135,9 @@ router.post('/approve-shopkeeper', authenticateToken, requireSuperAdmin, async (
       await user.save();
 
       // Set Firebase custom claims
-      await setFirebaseCustomClaims(user.firebaseUid, { isAdmin: true });
+      if (user.firebaseUid) {
+        await setFirebaseCustomClaims(user.firebaseUid, { isAdmin: true });
+      }
     }
 
     // Update request status

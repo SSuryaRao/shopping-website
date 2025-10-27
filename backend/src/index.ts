@@ -10,6 +10,7 @@ import mongoose from 'mongoose';
 import path from 'path';
 
 import authRoutes from './routes/auth';
+import authNewRoutes from './routes/authNew'; // New Firebase-first auth
 import productRoutes from './routes/products';
 import userRoutes from './routes/user';
 import orderRoutes from './routes/orders';
@@ -131,7 +132,8 @@ const connectToMongoDB = async () => {
 connectToMongoDB();
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes); // Legacy auth routes (will be deprecated)
+app.use('/api/v2/auth', authNewRoutes); // New Firebase-first auth routes
 app.use('/api/products', productRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/orders', orderRoutes);

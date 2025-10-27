@@ -1,15 +1,44 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_V2_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/v2` : 'http://localhost:5000/api/v2';
 
 export class ApiClient {
   private baseURL: string;
+  private v2BaseURL: string;
   private token: string | null = null;
+  private firebaseToken: string | null = null;
 
   constructor() {
     this.baseURL = API_BASE_URL;
+    this.v2BaseURL = API_V2_BASE_URL;
+
+    // Try to restore token from localStorage
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('jwt_token');
+      this.firebaseToken = localStorage.getItem('firebase_token');
+    }
   }
 
   setAuthToken(token: string) {
     this.token = token;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('jwt_token', token);
+    }
+  }
+
+  setFirebaseToken(token: string) {
+    this.firebaseToken = token;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('firebase_token', token);
+    }
+  }
+
+  clearTokens() {
+    this.token = null;
+    this.firebaseToken = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('firebase_token');
+    }
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
@@ -66,6 +95,7 @@ export class ApiClient {
     profile?: {
       name?: string;
       message?: string;
+      displayName?: string;
     };
   }) {
     // For register, we need the full response, not just data
@@ -99,6 +129,233 @@ export class ApiClient {
       }
       throw error;
     }
+  }
+
+  // NEW: Multi-Account Authentication Methods
+
+  async loginWithMobile(mobileNumber: string, password: string) {
+    const url = `${this.baseURL}/auth/login/mobile`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobileNumber, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Login failed');
+    }
+
+    return response.json();
+  }
+
+  async loginWithEmail(email: string, password: string) {
+    const url = `${this.baseURL}/auth/login/email`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Login failed');
+    }
+
+    return response.json();
+  }
+
+  async loginWithUserId(uniqueUserId: string, password: string) {
+    const url = `${this.baseURL}/auth/login/userid`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uniqueUserId, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Login failed');
+    }
+
+    return response.json();
+  }
+
+  async selectAccount(uniqueUserId: string, tempToken: string) {
+    const url = `${this.baseURL}/auth/select-account`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uniqueUserId, tempToken }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Account selection failed');
+    }
+
+    return response.json();
+  }
+
+  async registerNew(registrationData: {
+    registrationType: 'mobile' | 'email';
+    mobileNumber?: string;
+    email?: string;
+    password: string;
+    name: string;
+    displayName?: string;
+    role: 'customer' | 'shopkeeper';
+    referralCode?: string;
+  }) {
+    const url = `${this.baseURL}/auth/register/new`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registrationData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Registration failed');
+    }
+
+    return response.json();
+  }
+
+  async getSwitchableAccounts() {
+    return this.request('/auth/switchable-accounts');
+  }
+
+  async switchAccount(uniqueUserId: string) {
+    const url = `${this.baseURL}/auth/switch-account`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ uniqueUserId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Account switch failed');
+    }
+
+    return response.json();
+  }
+
+  async checkAccounts(identifier: string, type: 'mobile' | 'email') {
+    const url = `${this.baseURL}/auth/check-accounts`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, type }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Check failed');
+    }
+
+    return response.json();
+  }
+
+  // ===== NEW V2 FIREBASE-FIRST AUTH METHODS =====
+
+  async firebaseLogin(firebaseToken: string) {
+    const url = `${this.v2BaseURL}/auth/firebase-login`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${firebaseToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Firebase login failed');
+    }
+
+    return response.json();
+  }
+
+  async selectProfile(firebaseToken: string, uniqueUserId: string) {
+    const url = `${this.v2BaseURL}/auth/select-profile`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${firebaseToken}`,
+      },
+      body: JSON.stringify({ uniqueUserId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Profile selection failed');
+    }
+
+    return response.json();
+  }
+
+  async createProfile(firebaseToken: string, profileData: {
+    name: string;
+    profileName: string;
+    role: 'customer' | 'shopkeeper';
+    inviteToken?: string;
+    referralCode?: string;
+  }) {
+    const url = `${this.v2BaseURL}/auth/create-profile`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${firebaseToken}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Profile creation failed');
+    }
+
+    return response.json();
+  }
+
+  async getMyProfiles() {
+    return this.request('/v2/auth/my-profiles');
+  }
+
+  async switchProfile(uniqueUserId: string) {
+    const url = `${this.v2BaseURL}/auth/switch-profile`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ uniqueUserId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Profile switch failed');
+    }
+
+    return response.json();
   }
 
   // Product methods

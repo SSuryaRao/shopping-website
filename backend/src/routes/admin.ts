@@ -144,11 +144,11 @@ router.get('/products', authenticateToken, requireAdmin, async (req: Authenticat
 // Create product
 router.post('/products', authenticateToken, requireAdmin, upload.single('image'), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
-    const { name, description, price, points, stock, category, isActive } = req.body;
+    const { name, description, price, cost, points, stock, category, isActive, buyerRewardPoints, commissionStructure } = req.body;
     const imageFile = req.file;
 
     // Validate required fields
-    if (!name || !description || !price || !points || !stock || !category) {
+    if (!name || !description || !price || !cost || !points || !stock || !category) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required',
@@ -175,16 +175,23 @@ router.post('/products', authenticateToken, requireAdmin, upload.single('image')
       });
     }
 
+    // Parse MLM fields
+    const parsedBuyerRewardPoints = buyerRewardPoints ? parseInt(buyerRewardPoints) : 0;
+    const parsedCommissionStructure = commissionStructure ? JSON.parse(commissionStructure) : [];
+
     // Create product
     const product = new Product({
       name: name.trim(),
       description: description.trim(),
       price: parseFloat(price),
+      cost: parseFloat(cost),
       points: parseInt(points),
       imageURL,
       stock: parseInt(stock),
       category: category.trim().toLowerCase(),
       isActive: isActive === 'true' || isActive === true,
+      buyerRewardPoints: parsedBuyerRewardPoints,
+      commissionStructure: parsedCommissionStructure,
     });
 
     await product.save();
@@ -206,7 +213,7 @@ router.post('/products', authenticateToken, requireAdmin, upload.single('image')
 // Update product
 router.put('/products/:id', authenticateToken, requireAdmin, upload.single('image'), async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
-    const { name, description, price, points, stock, category, isActive } = req.body;
+    const { name, description, price, cost, points, stock, category, isActive, buyerRewardPoints, commissionStructure } = req.body;
     const imageFile = req.file;
 
     const product = await Product.findById(req.params.id);
@@ -221,10 +228,17 @@ router.put('/products/:id', authenticateToken, requireAdmin, upload.single('imag
     if (name !== undefined) product.name = name.trim();
     if (description !== undefined) product.description = description.trim();
     if (price !== undefined) product.price = parseFloat(price);
+    if (cost !== undefined) product.cost = parseFloat(cost);
     if (points !== undefined) product.points = parseInt(points);
     if (stock !== undefined) product.stock = parseInt(stock);
     if (category !== undefined) product.category = category.trim().toLowerCase();
     if (isActive !== undefined) product.isActive = isActive === 'true' || isActive === true;
+
+    // Update MLM fields
+    if (buyerRewardPoints !== undefined) product.buyerRewardPoints = parseInt(buyerRewardPoints);
+    if (commissionStructure !== undefined) {
+      product.commissionStructure = JSON.parse(commissionStructure);
+    }
 
     // Update image if new one provided
     if (imageFile) {

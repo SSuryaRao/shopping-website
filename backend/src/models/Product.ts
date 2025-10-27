@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICommissionLevel {
   level: number;
-  amount: number;
+  points: number;
 }
 
 export interface IProduct extends Document {
@@ -15,10 +15,10 @@ export interface IProduct extends Document {
   stock: number;
   category: string;
   isActive: boolean;
-  // MLM Commission Structure
+  // MLM Commission Structure (in points)
   commissionStructure: ICommissionLevel[];
-  totalCommission: number; // Auto-calculated sum of all levels
-  profitMargin: number; // price - cost - totalCommission
+  buyerRewardPoints: number; // Reward points for the buyer themselves
+  totalCommissionPoints: number; // Auto-calculated sum of all levels
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,21 +79,22 @@ const productSchema = new Schema<IProduct>(
           min: 1,
           max: 20,
         },
-        amount: {
+        points: {
           type: Number,
           required: true,
           min: 0,
         },
       },
     ],
-    totalCommission: {
+    buyerRewardPoints: {
       type: Number,
       default: 0,
       min: 0,
     },
-    profitMargin: {
+    totalCommissionPoints: {
       type: Number,
       default: 0,
+      min: 0,
     },
   },
   {
@@ -101,18 +102,16 @@ const productSchema = new Schema<IProduct>(
   }
 );
 
-// Calculate totalCommission and profitMargin before saving
+// Calculate totalCommissionPoints before saving
 productSchema.pre('save', function (next) {
   if (this.commissionStructure && this.commissionStructure.length > 0) {
-    this.totalCommission = this.commissionStructure.reduce(
-      (sum, level) => sum + level.amount,
+    this.totalCommissionPoints = this.commissionStructure.reduce(
+      (sum, level) => sum + level.points,
       0
     );
   } else {
-    this.totalCommission = 0;
+    this.totalCommissionPoints = 0;
   }
-
-  this.profitMargin = this.price - this.cost - this.totalCommission;
   next();
 });
 

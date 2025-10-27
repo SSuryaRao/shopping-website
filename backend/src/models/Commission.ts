@@ -6,7 +6,7 @@ export interface ICommission extends Document {
   orderId: mongoose.Types.ObjectId;
   productId: mongoose.Types.ObjectId;
   level: number;
-  amount: number;
+  points: number; // Commission in points, not dollars
   status: 'pending' | 'paid' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
@@ -41,10 +41,10 @@ const commissionSchema = new Schema<ICommission>(
     level: {
       type: Number,
       required: true,
-      min: 1,
+      min: 0, // 0 = buyer's own reward, 1-20 = upline levels
       max: 20,
     },
-    amount: {
+    points: {
       type: Number,
       required: true,
       min: 0,

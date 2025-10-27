@@ -172,28 +172,55 @@ export const distributeCommissions = async (
   try {
     // Get commission structure from product
     const commissionStructure = product.commissionStructure || [];
+    const buyerRewardPoints = product.buyerRewardPoints || 0;
 
+    let totalDistributed = 0;
+    let commissionsCreated = 0;
+
+    // First, give reward points to the buyer themselves (level 0)
+    if (buyerRewardPoints > 0) {
+      const buyerCommission = new Commission({
+        userId: buyerId,
+        fromUserId: buyerId,
+        orderId: orderId,
+        productId: product._id,
+        level: 0, // Level 0 represents buyer's own reward
+        points: buyerRewardPoints,
+        status: 'pending',
+      });
+
+      await buyerCommission.save({ session });
+
+      // Update buyer's points
+      await User.findByIdAndUpdate(
+        buyerId,
+        { $inc: { totalPoints: buyerRewardPoints } },
+        { session }
+      );
+
+      totalDistributed += buyerRewardPoints;
+      commissionsCreated++;
+    }
+
+    // If no upline commissions configured, commit and return
     if (commissionStructure.length === 0) {
       await session.commitTransaction();
-      return { success: true, totalDistributed: 0, commissionsCreated: 0 };
+      return { success: true, totalDistributed, commissionsCreated };
     }
 
     // Get upline chain
     const upline = await getUplineChain(buyerId, 20);
 
-    let totalDistributed = 0;
-    let commissionsCreated = 0;
-
-    // Distribute commissions based on product's commission structure
+    // Distribute commission points to upline based on product's commission structure
     for (const levelConfig of commissionStructure) {
       const level = levelConfig.level;
-      const amount = levelConfig.amount;
+      const points = levelConfig.points;
 
       // Check if upline exists at this level (level 1 = index 0)
       const uplineUser = upline[level - 1];
 
-      if (!uplineUser || amount <= 0) {
-        continue; // Skip if no upline at this level or amount is 0
+      if (!uplineUser || points <= 0) {
+        continue; // Skip if no upline at this level or points is 0
       }
 
       // Create commission record
@@ -203,20 +230,20 @@ export const distributeCommissions = async (
         orderId: orderId,
         productId: product._id,
         level: level,
-        amount: amount,
+        points: points,
         status: 'pending',
       });
 
       await commission.save({ session });
 
-      // Update user's pending earnings
+      // Update user's points
       await User.findByIdAndUpdate(
         uplineUser._id as mongoose.Types.ObjectId,
-        { $inc: { totalEarnings: amount, pendingWithdrawal: amount } },
+        { $inc: { totalPoints: points } },
         { session }
       );
 
-      totalDistributed += amount;
+      totalDistributed += points;
       commissionsCreated++;
     }
 

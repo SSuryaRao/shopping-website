@@ -11,12 +11,14 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
 import { apiClient } from './api';
-import { User } from '@/types';
+import { User, AccountOption } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
+  accountOptions: AccountOption[] | null;
+  tempToken: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, registrationData: {
     role: 'customer' | 'shopkeeper';
@@ -28,6 +30,12 @@ interface AuthContextType {
     };
   }) => Promise<{ status: string; isAdmin: boolean; message: string; data: unknown }>;
   signInWithGoogle: () => Promise<void>;
+  signInWithMobile: (mobile: string, password: string) => Promise<AccountOption[] | null>;
+  signInWithEmail: (email: string, password: string) => Promise<AccountOption[] | null>;
+  signInWithUserId: (userId: string, password: string) => Promise<void>;
+  selectAccount: (uniqueUserId: string) => Promise<void>;
+  switchToAccount: (uniqueUserId: string) => Promise<void>;
+  clearAccountOptions: () => void;
   logout: () => Promise<void>;
 }
 
@@ -37,6 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountOptions, setAccountOptions] = useState<AccountOption[] | null>(null);
+  const [tempToken, setTempToken] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -202,19 +212,127 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await signOut(auth);
+      setAccountOptions(null);
+      setTempToken(null);
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;
     }
   };
 
+  // NEW: Login with mobile number
+  const signInWithMobile = async (mobile: string, password: string): Promise<AccountOption[] | null> => {
+    try {
+      const response = await apiClient.loginWithMobile(mobile, password);
+
+      if ('requiresSelection' in response && response.requiresSelection) {
+        // Multiple accounts found
+        setAccountOptions(response.accounts);
+        setTempToken(response.tempToken);
+        return response.accounts;
+      } else {
+        // Single account - auto login
+        apiClient.setAuthToken(response.token);
+        setUser(response.user);
+        setAccountOptions(null);
+        setTempToken(null);
+        return null;
+      }
+    } catch (error) {
+      console.error('Mobile login error:', error);
+      throw error;
+    }
+  };
+
+  // NEW: Login with email
+  const signInWithEmail = async (email: string, password: string): Promise<AccountOption[] | null> => {
+    try {
+      const response = await apiClient.loginWithEmail(email, password);
+
+      if ('requiresSelection' in response && response.requiresSelection) {
+        // Multiple accounts found
+        setAccountOptions(response.accounts);
+        setTempToken(response.tempToken);
+        return response.accounts;
+      } else {
+        // Single account - auto login
+        apiClient.setAuthToken(response.token);
+        setUser(response.user);
+        setAccountOptions(null);
+        setTempToken(null);
+        return null;
+      }
+    } catch (error) {
+      console.error('Email login error:', error);
+      throw error;
+    }
+  };
+
+  // NEW: Login with user ID
+  const signInWithUserId = async (userId: string, password: string): Promise<void> => {
+    try {
+      const response = await apiClient.loginWithUserId(userId, password);
+      apiClient.setAuthToken(response.token);
+      setUser(response.user);
+      setAccountOptions(null);
+      setTempToken(null);
+    } catch (error) {
+      console.error('User ID login error:', error);
+      throw error;
+    }
+  };
+
+  // NEW: Select account from multiple options
+  const selectAccount = async (uniqueUserId: string): Promise<void> => {
+    try {
+      if (!tempToken) {
+        throw new Error('No temporary token available. Please login again.');
+      }
+
+      const response = await apiClient.selectAccount(uniqueUserId, tempToken);
+      apiClient.setAuthToken(response.token);
+      setUser(response.user);
+      setAccountOptions(null);
+      setTempToken(null);
+    } catch (error) {
+      console.error('Account selection error:', error);
+      throw error;
+    }
+  };
+
+  // NEW: Switch to another account
+  const switchToAccount = async (uniqueUserId: string): Promise<void> => {
+    try {
+      const response = await apiClient.switchAccount(uniqueUserId);
+      apiClient.setAuthToken(response.token);
+      setUser(response.user);
+    } catch (error) {
+      console.error('Account switch error:', error);
+      throw error;
+    }
+  };
+
+  // NEW: Clear account options (for back button)
+  const clearAccountOptions = () => {
+    setAccountOptions(null);
+    setTempToken(null);
+  };
+
   const value = {
     user,
     firebaseUser,
     loading,
+    accountOptions,
+    tempToken,
     signIn,
     signUp,
     signInWithGoogle,
+    signInWithMobile,
+    signInWithEmail,
+    signInWithUserId,
+    selectAccount,
+    switchToAccount,
+    clearAccountOptions,
     logout,
   };
 
