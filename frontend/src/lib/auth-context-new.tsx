@@ -8,7 +8,6 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
 import { apiClient } from './api';
@@ -70,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setProfileOptions(null);
               setLoading(false);
               return;
-            } catch (error) {
+            } catch {
               // JWT expired or invalid, continue with Firebase login
               console.log('Existing session invalid, logging in with Firebase');
               apiClient.clearTokens();
@@ -119,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
       // onAuthStateChanged will handle the rest
     } catch (error) {
       console.error('Google sign-in error:', error);

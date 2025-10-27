@@ -2,14 +2,15 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context-new';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 function SignUpForm() {
   const { signUpWithEmail, signInWithGoogle, user, loading: authLoading, needsProfileCreation } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({
     email: '',

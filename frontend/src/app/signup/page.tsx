@@ -47,6 +47,12 @@ function SignUpForm() {
   // Check existing accounts when mobile/email changes
   useEffect(() => {
     const checkExistingAccounts = async () => {
+      // Only check for mobile or email registration types
+      if (registrationType === 'google') {
+        setExistingAccountsCount(0);
+        return;
+      }
+
       const identifier = registrationType === 'mobile' ? formData.mobile : formData.email;
       if (!identifier || identifier.length < 5) {
         setExistingAccountsCount(0);
@@ -56,7 +62,7 @@ function SignUpForm() {
       try {
         const result = await apiClient.checkAccounts(identifier, registrationType);
         setExistingAccountsCount(result.accountCount || 0);
-      } catch (error) {
+      } catch {
         // Ignore errors - user might not exist
         setExistingAccountsCount(0);
       }
@@ -111,7 +117,6 @@ function SignUpForm() {
           referralCode: formData.referralCode || undefined,
           profile: {
             name: formData.name,
-            displayName: formData.displayName,
             message: formData.message || undefined,
           },
         });
@@ -213,7 +218,7 @@ function SignUpForm() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
                 <p className="text-sm text-blue-800">
-                  <strong>Save this User ID!</strong> You'll need it to:
+                  <strong>Save this User ID!</strong> You&apos;ll need it to:
                 </p>
                 <ul className="text-sm text-blue-800 list-disc list-inside space-y-1 ml-2">
                   <li>Login directly using User ID + Password</li>

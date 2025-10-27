@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Product, CommissionLevel } from '@/types';
-import { ArrowLeft, Plus, Trash2, Save, DollarSign } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 
 export default function ProductCommissionPage() {
   const { user } = useAuth();

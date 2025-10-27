@@ -11,7 +11,6 @@ type LoginMethod = 'mobile' | 'userid' | 'email';
 
 export default function LoginPage() {
   const {
-    signIn,
     signInWithGoogle,
     signInWithMobile,
     signInWithEmail,

@@ -19,6 +19,7 @@ export default function ProfileSwitcher() {
     if (isOpen) {
       loadProfiles();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Close dropdown when clicking outside

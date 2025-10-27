@@ -3,7 +3,9 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context-new';
-import { User, ShoppingCart, UserCog, Key, Copy, CheckCircle, AlertCircle } from 'lucide-react';
+import { User, ShoppingCart, UserCog, Key, AlertCircle } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 function CreateProfileForm() {
   const { createProfile, firebaseUser, user, loading: authLoading } = useAuth();
@@ -19,9 +21,6 @@ function CreateProfileForm() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [createdUserId, setCreatedUserId] = useState('');
-  const [copied, setCopied] = useState(false);
 
   // Check for referral code in URL
   useEffect(() => {
@@ -102,16 +101,6 @@ function CreateProfileForm() {
       ...formData,
       [name]: value,
     });
-  };
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(createdUserId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-    }
   };
 
   if (authLoading) {
