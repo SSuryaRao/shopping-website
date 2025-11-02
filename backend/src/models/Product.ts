@@ -115,9 +115,13 @@ productSchema.pre('save', function (next) {
   next();
 });
 
+// Individual indexes
 productSchema.index({ name: 1 });
 productSchema.index({ category: 1 });
-productSchema.index({ isActive: 1 });
 productSchema.index({ price: 1 });
+
+// Compound index for optimized product listing queries
+productSchema.index({ isActive: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, createdAt: -1 });
 
 export default mongoose.model<IProduct>('Product', productSchema);
