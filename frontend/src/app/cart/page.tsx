@@ -13,11 +13,18 @@ export default function CartPage() {
   const { user } = useAuth();
   const { items, updateQuantity, removeItem, clearCart, getSubtotal, getTotalPoints } = useCart();
   const [loading, setLoading] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const router = useRouter();
 
   const subtotal = getSubtotal();
   const totalPoints = getTotalPoints();
-  const finalTotal = subtotal;
+  const discount = pointsToRedeem * 0.01; // 1 point = ₹0.01
+  const finalTotal = Math.max(0, subtotal - discount);
+
+  const handlePointsRedemption = (points: number) => {
+    const maxRedeemable = Math.min(user?.totalPoints || 0, Math.floor(subtotal * 100)); // Can't redeem more than order value
+    setPointsToRedeem(Math.min(points, maxRedeemable));
+  };
 
   const handleCheckout = async () => {
     if (!user || items.length === 0) return;
@@ -29,7 +36,7 @@ export default function CartPage() {
           productId: item.product._id,
           quantity: item.quantity,
         })),
-        pointsToRedeem: 0, // Points redemption disabled
+        pointsToRedeem: pointsToRedeem,
       };
 
       const order = await apiClient.createOrder(orderData);
@@ -37,6 +44,7 @@ export default function CartPage() {
       // Order submitted successfully
       alert('Order submitted successfully! Awaiting admin approval.');
       clearCart();
+      setPointsToRedeem(0);
       router.push('/dashboard?tab=orders');
     } catch (error) {
       console.error('Error creating order:', error);
@@ -88,63 +96,70 @@ export default function CartPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Continue Shopping
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
         <p className="text-gray-600">{items.length} item(s) in your cart</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2">
           <div className="space-y-4">
             {items.map((item) => (
               <div key={item.product._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 relative flex-shrink-0">
-                    <Image
-                      src={item.product.imageURL}
-                      alt={item.product.name}
-                      fill
-                      className="object-cover rounded-lg"
-                    />
-                  </div>
+                {/* Mobile Layout */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 relative flex-shrink-0">
+                      <Image
+                        src={item.product.imageURL}
+                        alt={item.product.name}
+                        fill
+                        className="object-cover rounded-lg"
+                      />
+                    </div>
 
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{item.product.name}</h3>
-                    <p className="text-gray-600 text-sm">{item.product.description}</p>
-                    <div className="flex items-center mt-2">
-                      <span className="text-lg font-bold text-gray-900">
-                        ₹{item.product.price.toFixed(2)}
-                      </span>
-                      <div className="flex items-center ml-4 text-yellow-600">
-                        <Star className="h-4 w-4 mr-1" />
-                        <span className="text-sm">{item.product.points} pts</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{item.product.name}</h3>
+                      <p className="text-gray-600 text-sm line-clamp-2">{item.product.description}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-lg font-bold text-gray-900">
+                          ₹{item.product.price.toFixed(2)}
+                        </span>
+                        <div className="flex items-center text-yellow-600">
+                          <Star className="h-4 w-4 mr-1" />
+                          <span className="text-sm">{item.product.points} pts</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  {/* Quantity Controls */}
+                  <div className="flex items-center justify-between sm:justify-end gap-4">
+                    <div className="flex items-center space-x-3 bg-gray-50 rounded-lg px-3 py-2">
+                      <button
+                        onClick={() => updateQuantity(item.product._id, item.quantity - 1)}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <Minus className="h-5 w-5" />
+                      </button>
+                      <span className="w-8 text-center font-medium text-lg">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.product._id, item.quantity + 1)}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        disabled={item.quantity >= item.product.stock}
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                    </div>
+
                     <button
-                      onClick={() => updateQuantity(item.product._id, item.quantity - 1)}
-                      className="p-1 hover:bg-gray-100 rounded"
+                      onClick={() => removeItem(item.product._id)}
+                      className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      aria-label="Remove item"
                     >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="w-12 text-center font-medium">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.product._id, item.quantity + 1)}
-                      className="p-1 hover:bg-gray-100 rounded"
-                      disabled={item.quantity >= item.product.stock}
-                    >
-                      <Plus className="h-4 w-4" />
+                      <Trash2 className="h-5 w-5" />
                     </button>
                   </div>
-
-                  <button
-                    onClick={() => removeItem(item.product._id)}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
               </div>
             ))}

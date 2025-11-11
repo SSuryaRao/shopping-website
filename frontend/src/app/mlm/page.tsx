@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Commission, CommissionSummary, DownlineUser, MLMTreeNode } from '@/types';
@@ -53,8 +53,18 @@ export default function MLMDashboard() {
     return token;
   }, []);
 
-  const fetchMLMData = useCallback(async () => {
+  const fetchMLMDataRef = useRef<() => Promise<void>>();
+  const isFetchingRef = useRef(false);
+
+  fetchMLMDataRef.current = async () => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current) {
+      console.log('Already fetching MLM data, skipping...');
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
       setLoading(true);
       console.log('MLM Page - User object:', user);
       console.log('MLM Page - User referralCode:', user?.referralCode);
@@ -121,8 +131,15 @@ export default function MLMDashboard() {
       console.error('Error fetching MLM data:', err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [user, maxDepth, getAuthToken]);
+  };
+
+  const fetchMLMData = useCallback(() => {
+    return fetchMLMDataRef.current?.();
+  }, []);
+
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -130,11 +147,19 @@ export default function MLMDashboard() {
       return;
     }
 
+    // Only run once when component mounts
+    if (hasInitialized.current) {
+      return;
+    }
+
+    hasInitialized.current = true;
+
     // Refresh user data to get latest points
     refreshUser().then(() => {
       fetchMLMData();
     });
-  }, [router, fetchMLMData, refreshUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router]); // Only depend on user and router, not the functions
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -224,34 +249,34 @@ export default function MLMDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">MLM Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">MLM Dashboard</h1>
 
         {/* Referral Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 mb-8 text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-4 sm:p-6 mb-6 sm:mb-8 text-white">
           <div className="flex items-center mb-4">
-            <Share2 className="w-6 h-6 mr-2" />
-            <h2 className="text-xl font-semibold">Your Referral Link</h2>
+            <Share2 className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+            <h2 className="text-lg sm:text-xl font-semibold">Your Referral Link</h2>
           </div>
           <p className="text-sm mb-4 opacity-90">Share this link to invite others and earn commissions on their purchases</p>
-          <div className="bg-white bg-opacity-20 rounded-lg p-4 mb-3">
-            <p className="text-sm font-mono break-all text-black">{referralLink || 'Loading your referral link...'}</p>
+          <div className="bg-white bg-opacity-20 rounded-lg p-3 sm:p-4 mb-3">
+            <p className="text-xs sm:text-sm font-mono break-all text-gray-900">{referralLink || 'Loading your referral link...'}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => copyToClipboard(referralLink)}
-              className="flex items-center px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-gray-100 font-medium"
+              className="flex items-center justify-center px-4 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-100 font-medium transition-colors"
             >
               {copied ? <CheckCircle className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
               {copied ? 'Copied!' : 'Copy Link'}
             </button>
             <button
               onClick={() => copyToClipboard(referralCode)}
-              className="flex items-center px-4 py-2 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 font-medium"
+              className="flex items-center justify-center px-4 py-3 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 font-medium transition-colors"
             >
               <Copy className="w-4 h-4 mr-2" />
-              Copy Code: {referralCode}
+              <span className="truncate">Copy Code: {referralCode}</span>
             </button>
           </div>
         </div>
@@ -308,55 +333,55 @@ export default function MLMDashboard() {
         )}
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Earnings</p>
-                <p className="text-3xl font-bold text-gray-900">₹{summary?.totalEarnings.toFixed(2) || '0.00'}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Earnings</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">₹{summary?.totalEarnings.toFixed(2) || '0.00'}</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <DollarSign className="w-6 h-6 text-green-600" />
+              <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Pending Withdrawal</p>
-                <p className="text-3xl font-bold text-gray-900">₹{summary?.pendingWithdrawal.toFixed(2) || '0.00'}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Pending Withdrawal</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">₹{summary?.pendingWithdrawal.toFixed(2) || '0.00'}</p>
               </div>
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <TrendingUp className="w-6 h-6 text-yellow-600" />
+              <div className="p-2 sm:p-3 bg-yellow-100 rounded-full">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6 sm:col-span-2 md:col-span-1">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Withdrawn</p>
-                <p className="text-3xl font-bold text-gray-900">₹{summary?.withdrawnAmount.toFixed(2) || '0.00'}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Withdrawn</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">₹{summary?.withdrawnAmount.toFixed(2) || '0.00'}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <CheckCircle className="w-6 h-6 text-blue-600" />
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-full">
+                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Network Tree Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
+        {/* Network Tree Section - Mobile Optimized */}
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center">
-              <Network className="w-6 h-6 mr-2 text-gray-700" />
-              <h2 className="text-xl font-semibold text-black">Your MLM Network</h2>
+              <Network className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-gray-700" />
+              <h2 className="text-lg sm:text-xl font-semibold text-black">Your MLM Network</h2>
             </div>
             {treeData && (
               <button
                 onClick={() => setShowTree(!showTree)}
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center text-sm sm:text-base"
               >
                 <Network className="w-4 h-4 mr-2" />
                 {showTree ? 'Hide Tree View' : 'Show Tree View'}
@@ -366,6 +391,10 @@ export default function MLMDashboard() {
 
           {!showTree ? (
             // Simple View - Direct Downline
+            <>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 sm:hidden">
+              <p className="text-xs text-blue-800">💡 Tip: Tap "Show Tree View" to see your full network tree. You can scroll horizontally to explore.</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Position */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
@@ -401,10 +430,14 @@ export default function MLMDashboard() {
                 )}
               </div>
             </div>
+            </>
           ) : (
             // Tree View
             treeData ? (
               <div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 sm:hidden">
+                  <p className="text-xs text-green-800">👆 Swipe left/right to explore your network tree</p>
+                </div>
                 <MLMTree treeData={treeData} />
 
                 {/* Load More Button */}
@@ -438,9 +471,56 @@ export default function MLMDashboard() {
         </div>
 
         {/* Recent Commissions */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <h2 className="text-xl font-semibold mb-6">Recent Commissions</h2>
-          <div className="overflow-x-auto">
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {commissions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No commissions yet. Start referring to earn!
+              </div>
+            ) : (
+              commissions.map((commission) => (
+                <div key={commission._id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{commission.fromUserId.name}</p>
+                      <p className="text-sm text-gray-600">{commission.productId.name}</p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                        commission.status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : commission.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {commission.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">Date:</span>
+                      <p className="font-medium text-gray-900">{new Date(commission.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Level:</span>
+                      <p className="font-medium text-gray-900">Level {commission.level}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Amount:</span>
+                      <p className="text-lg font-bold text-green-600">{commission.points || 0} pts</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>

@@ -11,13 +11,32 @@ out/
 
 # Environment variables and credentials
 .env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.cloud-run
 backend/credentials/
 backend/config/credentials/
 backend/secrets/
+
+# Google Cloud and Firebase credentials
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!.vscode/*.json
+gcs-key.json
+service-account*.json
+firebase-key*.json
+
+# Cloud deployment files with secrets
+env-vars.yaml
+env.yaml
+backend/env-vars.yaml
+backend/env.yaml
+backend/.env.cloud-run
 
 # Logs
 logs

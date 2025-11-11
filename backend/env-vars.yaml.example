@@ -1,0 +1,28 @@
+# Cloud Run Environment Variables Template
+# Copy this file to env-vars.yaml and fill in your actual values
+# DO NOT commit env-vars.yaml to git - it contains sensitive credentials
+
+NODE_ENV: "production"
+FRONTEND_URL: "https://your-frontend-url.vercel.app"
+MONGO_URI: "your-mongodb-connection-string"
+FIREBASE_PROJECT_ID: "your-firebase-project-id"
+FIREBASE_PRIVATE_KEY_ID: "your-firebase-private-key-id"
+FIREBASE_PRIVATE_KEY: |
+  -----BEGIN PRIVATE KEY-----
+  your-firebase-private-key-here
+  -----END PRIVATE KEY-----
+FIREBASE_CLIENT_EMAIL: "your-service-account@your-project.iam.gserviceaccount.com"
+FIREBASE_CLIENT_ID: "your-firebase-client-id"
+FIREBASE_STORAGE_BUCKET: "your-bucket-name.firebasestorage.app"
+GCS_PROJECT_ID: "your-gcp-project-id"
+GCS_BUCKET_NAME: "your-bucket-name.firebasestorage.app"
+GCS_PRIVATE_KEY: |
+  -----BEGIN PRIVATE KEY-----
+  your-gcs-private-key-here
+  -----END PRIVATE KEY-----
+GCS_CLIENT_EMAIL: "your-service-account@your-project.iam.gserviceaccount.com"
+SUPER_ADMIN_EMAIL: "admin@example.com"
+JWT_SECRET: "your-jwt-secret-at-least-32-characters"
+BCRYPT_ROUNDS: "12"
+RAZORPAY_KEY_ID: "your-razorpay-key-id"
+RAZORPAY_KEY_SECRET: "your-razorpay-key-secret"

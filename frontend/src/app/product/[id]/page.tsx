@@ -132,14 +132,14 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Button */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      {/* Back Button - Mobile Optimized */}
       <Link
         href="/"
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
+        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 sm:mb-6 py-2"
       >
         <ArrowLeft className="h-5 w-5 mr-2" />
-        Back to products
+        <span className="text-sm sm:text-base">Back to products</span>
       </Link>
 
       {/* Error Message */}
@@ -173,13 +173,13 @@ export default function ProductPage() {
 
         {/* Product Details */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
 
-          <div className="flex items-center space-x-4 mb-6">
-            <span className="text-3xl font-bold text-gray-900">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
+            <span className="text-2xl sm:text-3xl font-bold text-gray-900">
               ₹{product.price.toFixed(2)}
             </span>
-            <div className="flex items-center bg-yellow-50 px-3 py-1 rounded-full">
+            <div className="flex items-center bg-yellow-50 px-4 py-2 rounded-full w-fit">
               <Star className="h-5 w-5 text-yellow-500 mr-1" />
               <span className="font-semibold text-yellow-700">
                 {product.points} points
@@ -220,19 +220,19 @@ export default function ProductPage() {
                   <button
                     onClick={decreaseQuantity}
                     disabled={quantity <= 1}
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-3 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </button>
-                  <span className="text-xl font-semibold px-4 py-2 border border-gray-300 rounded-lg min-w-[60px] text-center">
+                  <span className="text-xl font-semibold px-6 py-3 border border-gray-300 rounded-lg min-w-[80px] text-center">
                     {quantity}
                   </span>
                   <button
                     onClick={increaseQuantity}
                     disabled={quantity >= product.stock}
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-3 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -265,12 +265,12 @@ export default function ProductPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - Mobile Optimized */}
               <div className="space-y-3">
                 <button
                   onClick={handleAddToCart}
                   disabled={product.stock === 0}
-                  className="w-full bg-gray-100 text-gray-900 py-3 px-6 rounded-lg font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full bg-gray-100 text-gray-900 py-4 px-6 rounded-lg font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors text-base"
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Add to Cart
@@ -279,7 +279,7 @@ export default function ProductPage() {
                 <button
                   onClick={handleBuyNow}
                   disabled={purchasing || product.stock === 0}
-                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors text-base"
                 >
                   {purchasing ? (
                     'Processing...'

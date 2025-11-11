@@ -44,10 +44,10 @@ const TreeNodeComponent = ({ node, position = 'root', onNodeClick }: TreeNodePro
 
   return (
     <div className="flex flex-col items-center">
-      {/* Node Card */}
+      {/* Node Card - Mobile Responsive */}
       <div className="flex flex-col items-center">
         <div
-          className={`relative bg-white rounded-xl shadow-lg border-2 ${positionBorders[position]} p-4 min-w-[220px] cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 group`}
+          className={`relative bg-white rounded-xl shadow-lg border-2 ${positionBorders[position]} p-3 sm:p-4 min-w-[160px] sm:min-w-[200px] lg:min-w-[220px] max-w-[180px] sm:max-w-[220px] cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 group`}
           onClick={() => onNodeClick(node)}
         >
           {/* Position Badge */}
@@ -58,14 +58,14 @@ const TreeNodeComponent = ({ node, position = 'root', onNodeClick }: TreeNodePro
           )}
 
           {/* User Avatar */}
-          <div className={`flex items-center justify-center w-14 h-14 bg-gradient-to-r ${positionColors[position]} rounded-full mx-auto mb-3 shadow-md`}>
-            <span className="text-white text-xl font-bold">{node.name.charAt(0).toUpperCase()}</span>
+          <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r ${positionColors[position]} rounded-full mx-auto mb-2 sm:mb-3 shadow-md`}>
+            <span className="text-white text-base sm:text-lg lg:text-xl font-bold">{node.name.charAt(0).toUpperCase()}</span>
           </div>
 
           {/* User Info */}
           <div className="text-center">
-            <h3 className="font-bold text-gray-900 text-sm mb-1 truncate">{node.name}</h3>
-            <p className="text-xs text-gray-500 mb-2 truncate">{node.email}</p>
+            <h3 className="font-bold text-gray-900 text-xs sm:text-sm mb-1 truncate">{node.name}</h3>
+            <p className="text-[10px] sm:text-xs text-gray-500 mb-2 truncate">{node.email}</p>
 
             {/* Points Badge */}
             <div className="flex items-center justify-center bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg py-1.5 px-2 mb-2">
@@ -106,9 +106,9 @@ const TreeNodeComponent = ({ node, position = 'root', onNodeClick }: TreeNodePro
         )}
       </div>
 
-      {/* Children Container */}
+      {/* Children Container - Mobile Responsive */}
       {hasChildren && isExpanded && (
-        <div className="flex items-start justify-center gap-8 mt-4 relative">
+        <div className="flex items-start justify-center gap-3 sm:gap-6 lg:gap-8 mt-4 relative">
           {/* Horizontal Line */}
           {node.left && node.right && (
             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-full h-px bg-gray-300 max-w-md" />
@@ -124,12 +124,12 @@ const TreeNodeComponent = ({ node, position = 'root', onNodeClick }: TreeNodePro
 
           {/* Empty Slot - Left */}
           {!node.left && node.right && (
-            <div className="flex flex-col items-center min-w-[220px]">
+            <div className="flex flex-col items-center min-w-[160px] sm:min-w-[200px] lg:min-w-[220px]">
               <div className="w-px h-8 bg-gray-200" />
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 min-w-[220px] flex flex-col items-center justify-center">
-                <Users className="w-8 h-8 text-gray-300 mb-2" />
-                <p className="text-xs text-gray-400 font-medium">Available</p>
-                <p className="text-xs text-gray-400">Left Position</p>
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-3 sm:p-4 lg:p-6 min-w-[160px] sm:min-w-[200px] lg:min-w-[220px] flex flex-col items-center justify-center">
+                <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-gray-300 mb-2" />
+                <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Available</p>
+                <p className="text-[10px] sm:text-xs text-gray-400">Left Position</p>
               </div>
             </div>
           )}
@@ -144,12 +144,12 @@ const TreeNodeComponent = ({ node, position = 'root', onNodeClick }: TreeNodePro
 
           {/* Empty Slot - Right */}
           {!node.right && node.left && (
-            <div className="flex flex-col items-center min-w-[220px]">
+            <div className="flex flex-col items-center min-w-[160px] sm:min-w-[200px] lg:min-w-[220px]">
               <div className="w-px h-8 bg-gray-200" />
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 min-w-[220px] flex flex-col items-center justify-center">
-                <Users className="w-8 h-8 text-gray-300 mb-2" />
-                <p className="text-xs text-gray-400 font-medium">Available</p>
-                <p className="text-xs text-gray-400">Right Position</p>
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-3 sm:p-4 lg:p-6 min-w-[160px] sm:min-w-[200px] lg:min-w-[220px] flex flex-col items-center justify-center">
+                <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-gray-300 mb-2" />
+                <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Available</p>
+                <p className="text-[10px] sm:text-xs text-gray-400">Right Position</p>
               </div>
             </div>
           )}
@@ -172,8 +172,8 @@ export default function MLMTree({ treeData }: MLMTreeProps) {
 
   return (
     <div className="relative">
-      {/* Tree Visualization */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 overflow-x-auto">
+      {/* Tree Visualization - Mobile Optimized */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-3 sm:p-6 lg:p-8 overflow-x-auto">
         <div className="inline-block min-w-full">
           <TreeNodeComponent node={treeData} onNodeClick={handleNodeClick} />
         </div>

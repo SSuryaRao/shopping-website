@@ -230,8 +230,9 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-2 bg-white rounded-xl shadow-sm border border-gray-100 p-2 mb-8">
+      {/* Tab Navigation - Mobile Optimized */}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-8">
+        <div className="inline-flex sm:flex sm:flex-wrap gap-2 bg-white rounded-xl shadow-sm border border-gray-100 p-2 min-w-max sm:min-w-0">
         <button
           onClick={() => setActiveTab('products')}
           className={`flex items-center px-6 py-3 rounded-lg font-medium transition-all ${
@@ -297,6 +298,7 @@ export default function AdminPage() {
           <UserPlus className="h-5 w-5 mr-2" />
           Purchase for User
         </button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -380,7 +382,69 @@ export default function AdminPage() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile Card View */}
+          <div className="block md:hidden p-4 space-y-4">
+            {products.map((product) => (
+              <div key={product._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div className="flex gap-4 mb-4">
+                  <div className="h-20 w-20 relative rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                    <Image
+                      src={product.imageURL}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+                    <p className="text-sm text-gray-500 capitalize">{product.category}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        product.stock <= 5 ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {product.stock} units
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div>
+                    <span className="text-gray-500">Price:</span>
+                    <p className="font-semibold text-gray-900">₹{product.price.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Points:</span>
+                    <p className="font-semibold text-yellow-600">{product.points} pts</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingProduct(product)}
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteProduct(product._id)}
+                    className="flex-1 flex items-center justify-center px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -474,6 +538,7 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
       )}
@@ -524,7 +589,63 @@ export default function AdminPage() {
               <p className="text-gray-400">Try adjusting your search or filter</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile Card View */}
+            <div className="block lg:hidden p-4 space-y-4">
+              {filteredActiveUsers.map((user: any) => (
+                <div key={user._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="bg-blue-100 rounded-lg px-3 py-1">
+                          <span className="text-xs font-bold text-blue-900">{user.uniqueUserId}</span>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full mr-1 ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">{user.name}</h3>
+                      <p className="text-sm text-gray-600 truncate">{user.email || user.mobileNumber}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${
+                          user.role === 'shopkeeper' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {user.role}
+                        </span>
+                        <span className="text-sm font-medium text-yellow-600">{user.totalPoints || 0} pts</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    {user.isActive ? (
+                      <button
+                        onClick={() => handleDeactivateUser(user._id, user.name)}
+                        className="w-full inline-flex items-center justify-center bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-3 rounded-lg hover:from-red-700 hover:to-orange-700 transition-all font-medium shadow-md"
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleActivateUser(user._id)}
+                        className="w-full inline-flex items-center justify-center bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-md"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Activate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -600,6 +721,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}
@@ -636,7 +758,40 @@ export default function AdminPage() {
               <p className="text-gray-400">All users have been activated</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile Card View */}
+            <div className="block md:hidden p-4 space-y-4">
+              {filteredPendingUsers.map((user: any) => (
+                <div key={user._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <div className="bg-blue-100 rounded-lg px-3 py-1 inline-block mb-2">
+                        <span className="text-sm font-bold text-blue-900">{user.uniqueUserId}</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">{user.name}</h3>
+                      <p className="text-sm text-gray-600">{user.email || user.mobileNumber}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                          user.role === 'shopkeeper' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {user.role}
+                        </span>
+                        <span className="text-xs text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleActivateUser(user._id)}
+                    className="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    Activate User
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -683,6 +838,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}
@@ -704,7 +860,71 @@ export default function AdminPage() {
               <p className="text-gray-400">All orders have been processed</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile Card View */}
+            <div className="block lg:hidden p-4 space-y-4">
+              {pendingOrders.map((order: any) => (
+                <div key={order._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-gray-500">#{order._id.slice(-6)}</span>
+                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                          order.userId?.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {order.userId?.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">{order.userId?.name}</h3>
+                      <p className="text-xs text-gray-500">{order.userId?.uniqueUserId}</p>
+                      <div className="mt-3 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Product:</span>
+                          <span className="font-medium text-gray-900">{order.productId?.name}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Quantity:</span>
+                          <span className="font-medium text-gray-900">{order.quantity}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Total:</span>
+                          <span className="font-bold text-gray-900">₹{order.totalPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Points:</span>
+                          <span className="font-medium text-yellow-600">+{order.pointsEarned} pts</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Date:</span>
+                          <span className="text-gray-900">{new Date(order.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => handleApproveOrder(order._id)}
+                      disabled={!order.userId?.isActive}
+                      className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleRejectOrder(order._id)}
+                      className="flex-1 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                  {!order.userId?.isActive && (
+                    <p className="text-xs text-red-600 mt-2 text-center">User must be activated first</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -765,6 +985,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}
