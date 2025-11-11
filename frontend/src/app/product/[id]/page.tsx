@@ -177,7 +177,7 @@ export default function ProductPage() {
 
           <div className="flex items-center space-x-4 mb-6">
             <span className="text-3xl font-bold text-gray-900">
-              ${product.price.toFixed(2)}
+              ₹{product.price.toFixed(2)}
             </span>
             <div className="flex items-center bg-yellow-50 px-3 py-1 rounded-full">
               <Star className="h-5 w-5 text-yellow-500 mr-1" />
@@ -243,7 +243,7 @@ export default function ProductPage() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Price per item:</span>
-                    <span>${product.price.toFixed(2)}</span>
+                    <span>₹{product.price.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Quantity:</span>
@@ -256,7 +256,7 @@ export default function ProductPage() {
                   <hr className="my-2" />
                   <div className="flex justify-between font-semibold">
                     <span>Total:</span>
-                    <span>${(product.price * quantity).toFixed(2)}</span>
+                    <span>₹{(product.price * quantity).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-yellow-600">
                     <span>Total Points Earned:</span>

@@ -97,6 +97,8 @@ router.post('/register', async (req, res) => {
       role: 'customer', // Default, will be updated based on logic below
       isAdmin: false,
       isSuperAdmin: false,
+      isActive: false, // Default: inactive, requires admin activation
+      activatedAt: undefined as Date | undefined,
     };
 
     // Check if user should be super admin based on email
@@ -105,6 +107,8 @@ router.post('/register', async (req, res) => {
       userData.role = 'shopkeeper';
       userData.isAdmin = true;
       userData.isSuperAdmin = true;
+      userData.isActive = true; // Auto-activate super admin
+      userData.activatedAt = new Date();
     }
 
     if (role === 'shopkeeper' && !userData.isSuperAdmin) {
@@ -114,7 +118,7 @@ router.post('/register', async (req, res) => {
         const { valid, tokenDoc } = await isValidInviteToken(inviteToken);
 
         if (valid && tokenDoc) {
-          // Valid invite token - approve immediately
+          // Valid invite token - approve immediately as shopkeeper/admin but NOT activate account
           userData.role = 'shopkeeper';
           userData.isAdmin = true;
 
@@ -128,21 +132,21 @@ router.post('/register', async (req, res) => {
           // Set Firebase custom claims
           await setFirebaseCustomClaims(user.firebaseUid!, { isAdmin: true });
 
-          // Add to MLM tree if referral code provided
-          if (referralCodeFromSignup) {
-            await addUserToMLMTree(user._id as mongoose.Types.ObjectId, referralCodeFromSignup);
-          }
+          // NOTE: MLM tree joining is BLOCKED until account is activated by admin
+          // User must wait for admin activation before accessing referral features
 
           return res.json({
             success: true,
             status: 'approved',
             isAdmin: true,
-            message: 'Shopkeeper account created successfully',
+            message: 'Shopkeeper account created successfully. Awaiting admin activation for full access.',
+            requiresActivation: !user.isActive,
             data: {
               userId: user._id,
               uniqueUserId: user.uniqueUserId,
               role: user.role,
               isAdmin: user.isAdmin,
+              isActive: user.isActive,
               referralCode: user.referralCode,
             },
           });
@@ -214,22 +218,30 @@ router.post('/register', async (req, res) => {
         await setFirebaseCustomClaims(user.firebaseUid!, { isAdmin: true, isSuperAdmin: userData.isSuperAdmin });
       }
 
-      // Add to MLM tree if referral code provided
-      if (referralCodeFromSignup) {
+      // NOTE: MLM tree joining is BLOCKED until account is activated
+      // Super admin is auto-activated, regular customers must wait for admin activation
+      // Only add to MLM tree if account is active (i.e., super admin)
+      if (referralCodeFromSignup && user.isActive) {
         await addUserToMLMTree(user._id as mongoose.Types.ObjectId, referralCodeFromSignup);
       }
 
+      const statusMessage = user.isActive
+        ? `${userData.role === 'customer' ? 'Customer' : 'Admin'} account created and activated successfully`
+        : `${userData.role === 'customer' ? 'Customer' : 'User'} account created. Awaiting admin activation for full access.`;
+
       return res.json({
         success: true,
-        status: 'approved',
+        status: user.isActive ? 'activated' : 'pending_activation',
         isAdmin: userData.isAdmin,
-        message: `${userData.role === 'customer' ? 'Customer' : 'Admin'} account created successfully`,
+        requiresActivation: !user.isActive,
+        message: statusMessage,
         data: {
           userId: user._id,
           uniqueUserId: user.uniqueUserId,
           role: user.role,
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin,
+          isActive: user.isActive,
           referralCode: user.referralCode,
         },
       });
@@ -720,8 +732,10 @@ router.post('/register/new', async (req, res) => {
       password: hashedPassword,
       role: role === 'shopkeeper' ? 'pending' : 'customer',
       referralCode: userReferralCode,
+      pendingReferralCode: referralCodeFromSignup, // Store the referral code for later MLM tree placement
       isAdmin: false,
       isSuperAdmin: false,
+      isActive: false, // Requires admin activation
       totalPoints: 0,
       totalEarnings: 0,
       pendingWithdrawal: 0,
@@ -730,35 +744,18 @@ router.post('/register/new', async (req, res) => {
 
     await newUser.save();
 
-    // Handle MLM referral if provided
-    if (referralCodeFromSignup) {
-      try {
-        const referrer = await User.findOne({ referralCode: referralCodeFromSignup.toUpperCase() });
-
-        if (referrer) {
-          // Check self-referral
-          const isSelfReferral =
-            (userMobile && referrer.mobileNumber === userMobile) ||
-            (userEmail && referrer.email === userEmail);
-
-          if (!isSelfReferral) {
-            await addUserToMLMTree(newUser._id as mongoose.Types.ObjectId, referralCodeFromSignup.toUpperCase());
-          }
-        }
-      } catch (error) {
-        console.error('MLM tree addition error:', error);
-      }
-    }
+    // NOTE: MLM tree joining is BLOCKED until account is activated by admin
+    // When admin activates this account, they should manually add user to MLM tree using referredBy code
+    // User must wait for admin activation before accessing referral features
 
     // Generate token
     const token = generateToken((newUser._id as mongoose.Types.ObjectId).toString(), newUser.uniqueUserId);
 
     return res.status(201).json({
       success: true,
-      message: role === 'shopkeeper'
-        ? 'Registration successful. Your account is pending approval.'
-        : 'Registration successful',
-      status: role === 'shopkeeper' ? 'pending' : 'approved',
+      message: 'Registration successful. Your account is pending admin activation for full access.',
+      status: 'pending_activation',
+      requiresActivation: true,
       isAdmin: false,
       token,
       user: {
@@ -773,6 +770,7 @@ router.post('/register/new', async (req, res) => {
         referralCode: newUser.referralCode,
         isAdmin: newUser.isAdmin,
         isSuperAdmin: newUser.isSuperAdmin,
+        isActive: newUser.isActive,
       },
     });
   } catch (error) {

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticateToken, AuthenticatedRequest, requireAdmin } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest, requireAdmin, requireActiveAccount } from '../middleware/auth';
 import Commission from '../models/Commission';
 import User from '../models/User';
 import Product from '../models/Product';
@@ -15,7 +15,7 @@ import {
 const router = Router();
 
 // Generate or get user's referral code
-router.post('/referral-code', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.post('/referral-code', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const user = await User.findById(req.user._id);
 
@@ -60,7 +60,7 @@ router.post('/referral-code', authenticateToken, async (req: AuthenticatedReques
 });
 
 // Add user to MLM tree using referral code
-router.post('/join-tree', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.post('/join-tree', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const { referralCode } = req.body;
 
@@ -97,7 +97,7 @@ router.post('/join-tree', authenticateToken, async (req: AuthenticatedRequest, r
 });
 
 // Get user's upline chain
-router.get('/upline', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.get('/upline', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const maxLevel = parseInt(req.query.maxLevel as string) || 20;
     const upline = await getUplineChain(req.user._id, maxLevel);
@@ -127,7 +127,7 @@ router.get('/upline', authenticateToken, async (req: AuthenticatedRequest, res: 
 });
 
 // Get user's direct downline (left and right children)
-router.get('/downline/direct', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.get('/downline/direct', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const downline = await getDirectDownline(req.user._id);
 
@@ -164,7 +164,7 @@ router.get('/downline/direct', authenticateToken, async (req: AuthenticatedReque
 });
 
 // Get complete downline tree
-router.get('/downline/complete', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.get('/downline/complete', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const maxDepth = parseInt(req.query.maxDepth as string) || 20;
     const downline = await getCompleteDownline(req.user._id, maxDepth);
@@ -194,7 +194,7 @@ router.get('/downline/complete', authenticateToken, async (req: AuthenticatedReq
 });
 
 // Get hierarchical tree structure for visualization
-router.get('/tree', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.get('/tree', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const maxDepth = parseInt(req.query.maxDepth as string) || 5;
 
@@ -202,7 +202,7 @@ router.get('/tree', authenticateToken, async (req: AuthenticatedRequest, res: Re
     const buildTree = async (userId: any, depth: number): Promise<any> => {
       if (depth >= maxDepth) return null;
 
-      const user = await User.findById(userId).select('_id name email referralCode totalEarnings leftChild rightChild');
+      const user = await User.findById(userId).select('_id uniqueUserId name email referralCode totalEarnings totalPoints leftChild rightChild');
       if (!user) return null;
 
       const leftChild = user.leftChild ? await buildTree(user.leftChild, depth + 1) : null;
@@ -210,10 +210,12 @@ router.get('/tree', authenticateToken, async (req: AuthenticatedRequest, res: Re
 
       return {
         id: user._id,
+        uniqueUserId: user.uniqueUserId,
         name: user.name,
         email: user.email,
         referralCode: user.referralCode,
         totalEarnings: user.totalEarnings || 0,
+        totalPoints: user.totalPoints || 0,
         left: leftChild,
         right: rightChild,
         hasChildren: !!(user.leftChild || user.rightChild),
@@ -236,7 +238,7 @@ router.get('/tree', authenticateToken, async (req: AuthenticatedRequest, res: Re
 });
 
 // Get user's commissions
-router.get('/commissions', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.get('/commissions', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -278,7 +280,7 @@ router.get('/commissions', authenticateToken, async (req: AuthenticatedRequest, 
 });
 
 // Get commission summary
-router.get('/summary', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+router.get('/summary', authenticateToken, requireActiveAccount, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
     const summary = await getUserCommissionSummary(req.user._id);
 

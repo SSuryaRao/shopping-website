@@ -8,33 +8,16 @@ import { useCart } from '@/lib/cart-context';
 import { apiClient } from '@/lib/api';
 import { Minus, Plus, Trash2, Star, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import PaymentModal from '@/components/PaymentModal';
 
 export default function CartPage() {
   const { user } = useAuth();
   const { items, updateQuantity, removeItem, clearCart, getSubtotal, getTotalPoints } = useCart();
-  const [pointsToRedeem, setPointsToRedeem] = useState(0);
-  const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [currentOrder, setCurrentOrder] = useState<{ _id: string; totalPrice: number; pointsEarned: number } | null>(null);
   const router = useRouter();
 
   const subtotal = getSubtotal();
   const totalPoints = getTotalPoints();
-  const finalTotal = Math.max(subtotal - discount, 0);
-
-  const handlePointsRedemption = async (amount: number) => {
-    if (!user || amount <= 0 || amount > user.totalPoints) return;
-
-    try {
-      const result = await apiClient.calculatePointsDiscount(amount, subtotal);
-      setPointsToRedeem(result.pointsToRedeem);
-      setDiscount(result.discount);
-    } catch (error) {
-      console.error('Error calculating discount:', error);
-    }
-  };
+  const finalTotal = subtotal;
 
   const handleCheckout = async () => {
     if (!user || items.length === 0) return;
@@ -46,23 +29,21 @@ export default function CartPage() {
           productId: item.product._id,
           quantity: item.quantity,
         })),
-        pointsToRedeem,
+        pointsToRedeem: 0, // Points redemption disabled
       };
 
       const order = await apiClient.createOrder(orderData);
-      setCurrentOrder(order);
-      setShowPaymentModal(true);
+
+      // Order submitted successfully
+      alert('Order submitted successfully! Awaiting admin approval.');
+      clearCart();
+      router.push('/dashboard?tab=orders');
     } catch (error) {
       console.error('Error creating order:', error);
       alert('Error creating order. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePaymentSuccess = () => {
-    clearCart();
-    router.push('/dashboard?tab=orders');
   };
 
   if (!user) {
@@ -132,7 +113,7 @@ export default function CartPage() {
                     <p className="text-gray-600 text-sm">{item.product.description}</p>
                     <div className="flex items-center mt-2">
                       <span className="text-lg font-bold text-gray-900">
-                        ${item.product.price.toFixed(2)}
+                        ₹{item.product.price.toFixed(2)}
                       </span>
                       <div className="flex items-center ml-4 text-yellow-600">
                         <Star className="h-4 w-4 mr-1" />
@@ -177,7 +158,7 @@ export default function CartPage() {
           <div className="space-y-3 mb-6">
             <div className="flex justify-between">
               <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium">${subtotal.toFixed(2)}</span>
+              <span className="font-medium">₹{subtotal.toFixed(2)}</span>
             </div>
 
             <div className="flex justify-between text-yellow-600">
@@ -208,13 +189,13 @@ export default function CartPage() {
                     placeholder="Points to redeem"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">1 point = $0.01 discount</p>
+                <p className="text-xs text-gray-500 mt-1">1 point = ₹0.01 discount</p>
               </div>
 
               {discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Points Discount</span>
-                  <span>-${discount.toFixed(2)}</span>
+                  <span>-₹{discount.toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -222,7 +203,7 @@ export default function CartPage() {
             <div className="border-t pt-3">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>${finalTotal.toFixed(2)}</span>
+                <span>₹{finalTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -232,20 +213,13 @@ export default function CartPage() {
             disabled={loading || items.length === 0}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? 'Creating Order...' : 'Proceed to Payment'}
+            {loading ? 'Submitting Order...' : 'Place Order'}
           </button>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Your order will be pending admin approval
+          </p>
         </div>
       </div>
-
-      {/* Payment Modal */}
-      {showPaymentModal && currentOrder && (
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          order={currentOrder}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
     </div>
   );
 }

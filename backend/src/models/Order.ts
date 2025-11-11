@@ -6,9 +6,13 @@ export interface IOrder extends Document {
   quantity: number;
   totalPrice: number;
   pointsEarned: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  status: 'pending_admin_approval' | 'admin_approved' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentId?: mongoose.Types.ObjectId;
+  // Admin approval fields
+  adminApprovedBy?: mongoose.Types.ObjectId;
+  adminApprovedAt?: Date;
+  adminNotes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,8 +48,9 @@ const orderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'completed', 'cancelled'],
-      default: 'pending',
+      enum: ['pending_admin_approval', 'admin_approved', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'],
+      default: 'pending_admin_approval',
+      index: true,
     },
     paymentStatus: {
       type: String,
@@ -55,6 +60,18 @@ const orderSchema = new Schema<IOrder>(
     paymentId: {
       type: Schema.Types.ObjectId,
       ref: 'Payment',
+    },
+    // Admin approval fields
+    adminApprovedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    adminApprovedAt: {
+      type: Date,
+    },
+    adminNotes: {
+      type: String,
+      trim: true,
     },
   },
   {

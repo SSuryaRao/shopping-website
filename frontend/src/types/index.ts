@@ -1,6 +1,6 @@
 export interface User {
   id: string;
-  uniqueUserId: string; // Unique profile ID (USR123456)
+  uniqueUserId: string; // Unique profile ID (BRI123456)
   firebaseUid?: string; // Firebase authentication ID (optional for backwards compatibility)
   email?: string;
   mobileNumber?: string;
@@ -11,6 +11,8 @@ export interface User {
   totalPoints: number;
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
+  isActive?: boolean; // Account activation status
+  activatedAt?: string; // Date when account was activated
   // MLM fields
   referredBy?: string;
   leftChild?: string;
@@ -138,7 +140,10 @@ export interface Order {
   quantity: number;
   totalPrice: number;
   pointsEarned: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  status: 'pending_admin_approval' | 'admin_approved' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'pending';
+  adminApprovedBy?: string;
+  adminApprovedAt?: Date;
+  adminNotes?: string;
   createdAt: Date;
 }
 
@@ -169,7 +174,7 @@ export interface Commission {
     price: number;
   };
   level: number;
-  amount: number;
+  points: number; // Commission in points, not dollars
   status: 'pending' | 'paid' | 'cancelled';
   createdAt: Date;
 }
@@ -201,10 +206,12 @@ export interface DownlineUser {
 
 export interface MLMTreeNode {
   id: string;
+  uniqueUserId: string;
   name: string;
   email: string;
   referralCode?: string;
   totalEarnings: number;
+  totalPoints: number;
   left: MLMTreeNode | null;
   right: MLMTreeNode | null;
   hasChildren: boolean;

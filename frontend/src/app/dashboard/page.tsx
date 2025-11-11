@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function DashboardContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -21,6 +21,7 @@ function DashboardContent() {
     totalPointsEarned: 0,
     currentPoints: 0,
   });
+  const [localUserProfile, setLocalUserProfile] = useState<any>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -32,6 +33,9 @@ function DashboardContent() {
 
       console.log('Orders data:', ordersData);
       console.log('User profile:', userProfile);
+
+      // Store the fresh user profile locally
+      setLocalUserProfile(userProfile);
 
       setOrders(ordersData || []);
 
@@ -68,6 +72,21 @@ function DashboardContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router]); // fetchDashboardData is defined inside this component and should not be in dependencies
 
+  // Auto-refresh user profile every 30 seconds to check for account status changes
+  useEffect(() => {
+    if (!user || authLoading) return;
+
+    const intervalId = setInterval(async () => {
+      console.log('Auto-refreshing user profile...');
+      await refreshUser();
+      // Also refresh local dashboard data
+      const freshProfile = await apiClient.getUserProfile();
+      setLocalUserProfile(freshProfile);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [user, authLoading, refreshUser]);
+
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && ['overview', 'orders', 'profile'].includes(tab)) {
@@ -84,6 +103,59 @@ function DashboardContent() {
     });
   };
 
+  const getOrderStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+      'pending_admin_approval': {
+        bg: 'bg-yellow-100',
+        text: 'text-yellow-800',
+        label: 'Pending Admin Approval'
+      },
+      'admin_approved': {
+        bg: 'bg-blue-100',
+        text: 'text-blue-800',
+        label: 'Admin Approved'
+      },
+      'processing': {
+        bg: 'bg-indigo-100',
+        text: 'text-indigo-800',
+        label: 'Processing'
+      },
+      'shipped': {
+        bg: 'bg-purple-100',
+        text: 'text-purple-800',
+        label: 'Shipped'
+      },
+      'delivered': {
+        bg: 'bg-teal-100',
+        text: 'text-teal-800',
+        label: 'Delivered'
+      },
+      'completed': {
+        bg: 'bg-green-100',
+        text: 'text-green-800',
+        label: 'Completed'
+      },
+      'cancelled': {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        label: 'Cancelled'
+      },
+      'pending': {
+        bg: 'bg-gray-100',
+        text: 'text-gray-800',
+        label: 'Pending'
+      }
+    };
+
+    const config = statusConfig[status] || statusConfig['pending'];
+
+    return (
+      <span className={`${config.bg} ${config.text} px-3 py-1 rounded-full text-xs font-bold`}>
+        {config.label}
+      </span>
+    );
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -98,6 +170,9 @@ function DashboardContent() {
   if (!user) {
     return null;
   }
+
+  // Use the freshly fetched local profile if available, otherwise fall back to auth context user
+  const displayUser = localUserProfile || user;
 
   const TabButton = ({ tab, label, icon: Icon }: { tab: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }) => (
     <button
@@ -120,7 +195,7 @@ function DashboardContent() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center sm:text-left">
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-              Welcome back, <span className="text-yellow-300">{user.name}!</span>
+              Welcome back, <span className="text-yellow-300">{displayUser.name}!</span>
             </h1>
             <p className="text-indigo-100 text-lg">Manage your account and track your rewards journey</p>
           </div>
@@ -128,6 +203,32 @@ function DashboardContent() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 relative z-10">
+        {/* Account Activation Status Banner */}
+        {displayUser && !displayUser.isActive && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg shadow-md">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-bold text-yellow-800">Account Pending Activation</h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>Your account is awaiting admin activation. Once activated, you will be able to:</p>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Generate and use referral codes</li>
+                    <li>Join the MLM tree and earn commissions</li>
+                    <li>View your downline and upline</li>
+                    <li>Receive MLM commission points</li>
+                  </ul>
+                  <p className="mt-2 font-medium">Please contact support if you have been waiting for more than 24 hours.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab Navigation */}
         <div className="flex justify-center space-x-2 bg-white/80 backdrop-blur-lg p-2 rounded-2xl shadow-lg mb-8">
           <TabButton tab="overview" label="Overview" icon={TrendingUp} />
@@ -177,7 +278,7 @@ function DashboardContent() {
                   </div>
                   <div className="sm:ml-4">
                     <p className="text-xs sm:text-sm font-medium text-emerald-700">Total Spent</p>
-                    <p className="text-xl sm:text-2xl font-bold text-emerald-900">${stats.totalSpent.toFixed(2)}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-emerald-900">₹{stats.totalSpent.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="mt-2 text-right">
@@ -240,12 +341,12 @@ function DashboardContent() {
 
                 <div className="space-y-4 mb-6">
                   <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
-                    <span className="text-gray-700 font-medium">Every $1 spent</span>
+                    <span className="text-gray-700 font-medium">Every ₹1 spent</span>
                     <span className="font-bold text-indigo-600">1-5 points</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
                     <span className="text-gray-700 font-medium">100 points value</span>
-                    <span className="font-bold text-green-600">$1 discount</span>
+                    <span className="font-bold text-green-600">₹1 discount</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
                     <span className="text-gray-700 font-medium">Minimum redemption</span>
@@ -320,7 +421,7 @@ function DashboardContent() {
 
                         <div className="text-left sm:text-right">
                           <p className="text-2xl font-bold text-gray-900 mb-1">
-                            ${order.totalPrice.toFixed(2)}
+                            ₹{order.totalPrice.toFixed(2)}
                           </p>
                           <div className="flex items-center bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                             <Star className="h-3 w-3 mr-1" />
@@ -387,25 +488,13 @@ function DashboardContent() {
                           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
                             Qty: {order.quantity}
                           </span>
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              order.status === 'completed'
-                                ? 'bg-green-100 text-green-800'
-                                : order.status === 'processing'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : order.status === 'cancelled'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                          </span>
+                          {getOrderStatusBadge(order.status)}
                         </div>
                       </div>
 
                       <div className="text-left sm:text-right">
                         <p className="text-2xl font-bold text-gray-900 mb-1">
-                          ${order.totalPrice.toFixed(2)}
+                          ₹{order.totalPrice.toFixed(2)}
                         </p>
                         <div className="flex items-center bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                           <Star className="h-3 w-3 mr-1" />
@@ -435,14 +524,21 @@ function DashboardContent() {
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">Full Name</label>
                   <div className="bg-gradient-to-r from-gray-50 to-indigo-50 px-4 py-4 rounded-xl border border-gray-200">
-                    <p className="font-medium text-gray-900">{user?.name || 'Not available'}</p>
+                    <p className="font-medium text-gray-900">{displayUser?.name || 'Not available'}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-3">User ID</label>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-4 rounded-xl border border-blue-200">
+                    <p className="font-bold text-blue-900">{displayUser?.uniqueUserId || 'Not available'}</p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-gray-800 mb-3">Email Address</label>
                   <div className="bg-gradient-to-r from-gray-50 to-indigo-50 px-4 py-4 rounded-xl border border-gray-200">
-                    <p className="font-medium text-gray-900">{user?.email || 'Not available'}</p>
+                    <p className="font-medium text-gray-900">{displayUser?.email || 'Not available'}</p>
                   </div>
                 </div>
 
@@ -450,7 +546,7 @@ function DashboardContent() {
                   <label className="block text-sm font-bold text-gray-800 mb-3">Account Type</label>
                   <div className="bg-gradient-to-r from-gray-50 to-indigo-50 px-4 py-4 rounded-xl border border-gray-200">
                     <p className="font-medium text-gray-900">
-                      {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Customer'}
+                      {displayUser?.role ? displayUser.role.charAt(0).toUpperCase() + displayUser.role.slice(1) : 'Customer'}
                     </p>
                   </div>
                 </div>
@@ -459,7 +555,7 @@ function DashboardContent() {
                   <label className="block text-sm font-bold text-gray-800 mb-3">Member Since</label>
                   <div className="bg-gradient-to-r from-gray-50 to-indigo-50 px-4 py-4 rounded-xl border border-gray-200">
                     <p className="font-medium text-gray-900">
-                      {user?.createdAt ? formatDate(user.createdAt.toString()) : 'Not available'}
+                      {displayUser?.createdAt ? formatDate(displayUser.createdAt.toString()) : 'Not available'}
                     </p>
                   </div>
                 </div>
@@ -469,19 +565,37 @@ function DashboardContent() {
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-3">Account Status</label>
                 <div className="flex flex-wrap gap-3">
+                  {/* Activation Status Badge */}
                   <span
-                    className={`inline-flex px-4 py-2 text-sm font-bold rounded-xl shadow-lg ${
-                      user?.role === 'pending'
-                        ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
-                        : user?.isAdmin
+                    className={`inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl shadow-lg ${
+                      displayUser?.isActive
                         ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                        : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
+                        : 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
                     }`}
                   >
-                    {user?.role === 'pending' ? '🕐 Pending Approval' : user?.isAdmin ? '⚡ Admin User' : '✅ Active User'}
+                    {displayUser?.isActive ? (
+                      <>
+                        <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
+                        ✅ Active User
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 bg-white rounded-full mr-2"></span>
+                        🕐 Inactive - Pending Activation
+                      </>
+                    )}
                   </span>
-                  {user?.isSuperAdmin && (
-                    <span className="inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
+
+                  {/* Admin Badge */}
+                  {displayUser?.isAdmin && (
+                    <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg">
+                      ⚡ Admin Access
+                    </span>
+                  )}
+
+                  {/* Super Admin Badge */}
+                  {displayUser?.isSuperAdmin && (
+                    <span className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
                       👑 Super Admin
                     </span>
                   )}
@@ -495,7 +609,7 @@ function DashboardContent() {
                     <Star className="h-6 w-6 text-white" />
                   </div>
                   <p className="text-sm font-medium text-yellow-700">Total Points</p>
-                  <p className="text-2xl font-bold text-yellow-900">{user?.totalPoints || 0}</p>
+                  <p className="text-2xl font-bold text-yellow-900">{displayUser?.totalPoints || 0}</p>
                   <div className="mt-2 text-2xl">⭐</div>
                 </div>
 
@@ -513,13 +627,13 @@ function DashboardContent() {
                     <TrendingUp className="h-6 w-6 text-white" />
                   </div>
                   <p className="text-sm font-medium text-emerald-700">Total Spent</p>
-                  <p className="text-2xl font-bold text-emerald-900">${stats.totalSpent.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-emerald-900">₹{stats.totalSpent.toFixed(2)}</p>
                   <div className="mt-2 text-2xl">💰</div>
                 </div>
               </div>
 
               {/* Admin Access Cards */}
-              {user?.isAdmin && (
+              {displayUser?.isAdmin && (
                 <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl shadow-lg">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
@@ -541,7 +655,7 @@ function DashboardContent() {
                 </div>
               )}
 
-              {user?.isSuperAdmin && (
+              {displayUser?.isSuperAdmin && (
                 <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl shadow-lg">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">

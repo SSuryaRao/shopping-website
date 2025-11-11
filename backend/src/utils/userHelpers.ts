@@ -3,10 +3,10 @@ import bcrypt from 'bcrypt';
 
 /**
  * Generate a unique User ID
- * Format: USR + 6 random digits (e.g., USR123456)
+ * Format: BRI + 6 random digits (e.g., BRI123456)
  */
 export const generateUniqueUserId = async (): Promise<string> => {
-  const prefix = 'USR';
+  const prefix = 'BRI';
   let uniqueId: string;
   let exists = true;
 

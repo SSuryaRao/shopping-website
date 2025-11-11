@@ -33,6 +33,7 @@ interface AuthContextType {
   switchProfile: (uniqueUserId: string) => Promise<void>;
   getMyProfiles: () => Promise<ProfileOption[]>;
   clearProfileOptions: () => void;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -218,14 +219,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear Firebase auth
       await firebaseSignOut(auth);
+
+      // Clear API client tokens
       apiClient.clearTokens();
+
+      // Clear local state
       setUser(null);
       setProfileOptions(null);
       setNeedsProfileCreation(false);
+
+      // Redirect to home page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
+    }
+  };
+
+  // NEW: Refresh user profile data
+  const refreshUser = async () => {
+    try {
+      if (!firebaseUser) {
+        console.log('No firebase user to refresh');
+        return;
+      }
+
+      const token = await firebaseUser.getIdToken(true);
+      apiClient.setFirebaseToken(token);
+      apiClient.setAuthToken(token);
+
+      const userProfile = await apiClient.getUserProfile();
+      console.log('User profile refreshed:', userProfile);
+      setUser(userProfile);
+    } catch (error) {
+      console.error('Error refreshing user profile:', error);
+      // Don't throw - just log the error
     }
   };
 
@@ -243,6 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     switchProfile,
     getMyProfiles,
     clearProfileOptions,
+    refreshUser,
     logout,
   };
 

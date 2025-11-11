@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Commission, CommissionSummary, DownlineUser, MLMTreeNode } from '@/types';
-import { Copy, Users, DollarSign, TrendingUp, Share2, CheckCircle, Network } from 'lucide-react';
+import { Copy, Users, DollarSign, TrendingUp, Share2, CheckCircle, Network, ChevronDown } from 'lucide-react';
 import MLMTree from '@/components/MLMTree';
 
 export default function MLMDashboard() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
 
   const [summary, setSummary] = useState<CommissionSummary | null>(null);
@@ -28,6 +28,30 @@ export default function MLMDashboard() {
   const [joinSuccess, setJoinSuccess] = useState('');
   const [treeData, setTreeData] = useState<MLMTreeNode | null>(null);
   const [showTree, setShowTree] = useState(false);
+  const [maxDepth, setMaxDepth] = useState(5);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const getAuthToken = useCallback(async () => {
+    const { apiClient } = await import('@/lib/api');
+
+    // Get token - try stored JWT first, fallback to Firebase
+    let token = apiClient.getAuthToken();
+
+    // If no stored token, try to get Firebase token
+    if (!token) {
+      try {
+        const firebaseAuth = (await import('@/lib/firebase')).auth;
+        if (firebaseAuth.currentUser) {
+          token = await firebaseAuth.currentUser.getIdToken(true);
+          apiClient.setAuthToken(token);
+        }
+      } catch (err) {
+        console.error('Could not get Firebase token:', err);
+      }
+    }
+
+    return token;
+  }, []);
 
   const fetchMLMData = useCallback(async () => {
     try {
@@ -35,13 +59,18 @@ export default function MLMDashboard() {
       console.log('MLM Page - User object:', user);
       console.log('MLM Page - User referralCode:', user?.referralCode);
 
-      // Force refresh token to get latest user data
-      const token = await (await import('@/lib/firebase')).auth.currentUser?.getIdToken(true);
+      const token = await getAuthToken();
+
+      // If no token, user is not authenticated
+      if (!token) {
+        console.error('No authentication token available');
+        return;
+      }
+
+      const { apiClient } = await import('@/lib/api');
 
       // If user doesn't have referralCode, fetch fresh profile
       if (!user?.referralCode) {
-        const { apiClient } = await import('@/lib/api');
-        apiClient.setAuthToken(token!);
         const freshProfile = await apiClient.getUserProfile();
         console.log('Fresh profile fetched:', freshProfile);
         if (freshProfile.referralCode) {
@@ -81,7 +110,7 @@ export default function MLMDashboard() {
       setHasReferrer(!!user?.referredBy);
 
       // Fetch tree structure
-      const treeRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mlm/tree?maxDepth=5`, {
+      const treeRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mlm/tree?maxDepth=${maxDepth}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const treeResData = await treeRes.json();
@@ -93,7 +122,7 @@ export default function MLMDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, maxDepth, getAuthToken]);
 
   useEffect(() => {
     if (!user) {
@@ -101,13 +130,43 @@ export default function MLMDashboard() {
       return;
     }
 
-    fetchMLMData();
-  }, [user, router, fetchMLMData]);
+    // Refresh user data to get latest points
+    refreshUser().then(() => {
+      fetchMLMData();
+    });
+  }, [router, fetchMLMData, refreshUser]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const loadMoreLevels = async () => {
+    try {
+      setLoadingMore(true);
+      const newMaxDepth = maxDepth + 5;
+      setMaxDepth(newMaxDepth);
+
+      const token = await getAuthToken();
+      if (!token) {
+        console.error('No authentication token available');
+        return;
+      }
+
+      // Fetch tree with increased depth
+      const treeRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mlm/tree?maxDepth=${newMaxDepth}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const treeResData = await treeRes.json();
+      if (treeResData.success) {
+        setTreeData(treeResData.data);
+      }
+    } catch (err) {
+      console.error('Error loading more levels:', err);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const handleJoinTree = async () => {
@@ -121,7 +180,12 @@ export default function MLMDashboard() {
       setJoinError('');
       setJoinSuccess('');
 
-      const token = await (await import('@/lib/firebase')).auth.currentUser?.getIdToken();
+      const token = await getAuthToken();
+
+      if (!token) {
+        setJoinError('Authentication token not available. Please log in again.');
+        return;
+      }
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/mlm/join-tree`, {
         method: 'POST',
@@ -340,7 +404,30 @@ export default function MLMDashboard() {
           ) : (
             // Tree View
             treeData ? (
-              <MLMTree treeData={treeData} />
+              <div>
+                <MLMTree treeData={treeData} />
+
+                {/* Load More Button */}
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={loadMoreLevels}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Loading More Levels...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-5 h-5" />
+                        <span>Load 5 More Levels (Current: {maxDepth})</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <Network className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -400,7 +487,7 @@ export default function MLMDashboard() {
                         Level {commission.level}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                        ₹{commission.amount.toFixed(2)}
+                        {commission.points || 0} pts
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

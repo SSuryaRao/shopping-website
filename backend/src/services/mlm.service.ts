@@ -78,11 +78,23 @@ export const addUserToMLMTree = async (
       return { success: false, message: 'Invalid referral code' };
     }
 
+    // CRITICAL: Sponsor must be active to accept referrals
+    if (!sponsor.isActive) {
+      await session.abortTransaction();
+      return { success: false, message: 'Sponsor account is not activated. Cannot use this referral code.' };
+    }
+
     // Check if user is already in tree
     const newUser = await User.findById(newUserId).session(session);
     if (!newUser) {
       await session.abortTransaction();
       return { success: false, message: 'User not found' };
+    }
+
+    // CRITICAL: New user must be active to join MLM tree
+    if (!newUser.isActive) {
+      await session.abortTransaction();
+      return { success: false, message: 'Your account must be activated by admin before joining the MLM tree' };
     }
 
     if (newUser.referredBy) {
@@ -178,6 +190,17 @@ export const distributeCommissions = async (
     let commissionsCreated = 0;
 
     // First, give reward points to the buyer themselves (level 0)
+    // ONLY if buyer account is active
+    const buyer = await User.findById(buyerId).session(session);
+
+    if (!buyer) {
+      throw new Error('Buyer not found');
+    }
+
+    if (!buyer.isActive) {
+      throw new Error('Cannot distribute commissions for inactive user');
+    }
+
     if (buyerRewardPoints > 0) {
       const buyerCommission = new Commission({
         userId: buyerId,
@@ -212,6 +235,7 @@ export const distributeCommissions = async (
     const upline = await getUplineChain(buyerId, 20);
 
     // Distribute commission points to upline based on product's commission structure
+    // ONLY to active upline members
     for (const levelConfig of commissionStructure) {
       const level = levelConfig.level;
       const points = levelConfig.points;
@@ -221,6 +245,12 @@ export const distributeCommissions = async (
 
       if (!uplineUser || points <= 0) {
         continue; // Skip if no upline at this level or points is 0
+      }
+
+      // CRITICAL: Only award commissions to ACTIVE upline users
+      if (!uplineUser.isActive) {
+        console.log(`Skipping commission for inactive user at level ${level}: ${uplineUser.email || uplineUser.name}`);
+        continue; // Skip inactive users
       }
 
       // Create commission record

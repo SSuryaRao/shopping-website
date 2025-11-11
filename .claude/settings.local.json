@@ -8,7 +8,12 @@
       "Bash(curl:*)",
       "Bash(npm run dev:*)",
       "Bash(cat:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebFetch(domain:shopping-website-frontend-one.vercel.app)",
+      "Bash(npm run:*)",
+      "Bash(npx tsx:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(docker build:*)"
     ],
     "deny": [],
     "ask": []

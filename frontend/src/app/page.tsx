@@ -231,7 +231,7 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-2xl font-bold text-gray-900">
-                          ${product.price.toFixed(2)}
+                          ₹{product.price.toFixed(2)}
                         </p>
                       </div>
 

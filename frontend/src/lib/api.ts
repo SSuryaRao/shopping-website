@@ -41,6 +41,10 @@ export class ApiClient {
     }
   }
 
+  getAuthToken(): string | null {
+    return this.token;
+  }
+
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers: Record<string, string> = {
@@ -479,6 +483,82 @@ export class ApiClient {
     return this.request(`/admin/orders/${orderId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+    });
+  }
+
+  // Admin user activation methods
+  async getPendingUsers() {
+    const url = `${this.baseURL}/admin/users/pending`;
+    const headers: Record<string, string> = {};
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error('Failed to fetch pending users');
+    }
+
+    return response.json(); // Return full response with { success, data, count }
+  }
+
+  async getAllUsers() {
+    const url = `${this.baseURL}/admin/users/all`;
+    const headers: Record<string, string> = {};
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error('Failed to fetch all users');
+    }
+
+    return response.json(); // Return full response with { success, data, count }
+  }
+
+  async activateUser(userId: string) {
+    return this.request(`/admin/users/${userId}/activate`, {
+      method: 'POST',
+    });
+  }
+
+  async deactivateUser(userId: string) {
+    return this.request(`/admin/users/${userId}/deactivate`, {
+      method: 'POST',
+    });
+  }
+
+  // Admin order approval methods
+  async getPendingOrders() {
+    const url = `${this.baseURL}/admin/orders/pending`;
+    const headers: Record<string, string> = {};
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error('Failed to fetch pending orders');
+    }
+
+    return response.json(); // Return full response with { success, data, count }
+  }
+
+  async approveOrder(orderId: string, adminNotes?: string) {
+    return this.request(`/admin/orders/${orderId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ adminNotes }),
+    });
+  }
+
+  async rejectOrder(orderId: string, reason: string) {
+    return this.request(`/admin/orders/${orderId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   }
 }

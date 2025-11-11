@@ -107,62 +107,53 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       });
     }
 
-    // Calculate final total after points redemption (1 point = $0.01)
-    const discount = pointsToRedeem * 0.01;
-    const finalTotal = Math.max(subtotal - discount, 0);
+    // Calculate final total (no payment needed - admin will approve)
+    // Points redemption disabled - no discount applied
+    const finalTotal = subtotal;
 
     // Create orders for each item
     const createdOrders = [];
     for (const item of orderItems) {
-      // Calculate proportional discount for this item
-      const itemDiscount = finalTotal < subtotal ? (discount * (item.itemTotal / subtotal)) : 0;
-      const itemFinalPrice = item.itemTotal - itemDiscount;
-
       const order = new Order({
         userId: req.user._id,
         productId: item.product._id,
         quantity: item.quantity,
-        totalPrice: itemFinalPrice,
+        totalPrice: item.itemTotal,
         pointsEarned: item.itemPoints,
-        status: 'pending',
-        paymentStatus: 'pending',
+        status: 'pending_admin_approval', // Requires admin approval
+        paymentStatus: 'pending', // Keep for backward compatibility
       });
 
       await order.save({ session });
       createdOrders.push(order);
 
-      // Don't update stock or points yet - wait for payment
+      // Stock will be reduced when admin approves
+      // Points will be awarded when admin approves
     }
 
-    // Deduct redeemed points immediately (but don't add earned points yet)
-    if (pointsToRedeem > 0) {
-      await User.findByIdAndUpdate(
-        req.user._id,
-        { $inc: { totalPoints: -pointsToRedeem } },
-        { session }
-      );
-    }
+    // Don't deduct or award points yet - wait for admin approval
+    // Points redemption and MLM commissions will happen after admin approval
 
     await session.commitTransaction();
     session.endSession();
 
-    // MLM commissions will be distributed after payment verification
-
-    // Return first order for payment modal (simplified for single-order payment flow)
+    // Return order details
     const firstOrder = createdOrders[0];
 
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
+      message: 'Order submitted successfully! Awaiting admin approval.',
+      requiresApproval: true,
       data: {
         _id: firstOrder._id,
         totalPrice: finalTotal,
         pointsEarned: totalPointsEarned,
         orders: createdOrders.map(o => o._id),
+        status: 'pending_admin_approval',
         summary: {
           subtotal,
-          pointsRedeemed: pointsToRedeem,
-          discount,
+          pointsRedeemed: 0, // Points redemption disabled
+          discount: 0,
           finalTotal,
           pointsEarned: totalPointsEarned,
         },

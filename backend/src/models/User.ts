@@ -13,6 +13,11 @@ export interface IUser extends Document {
   role: 'customer' | 'shopkeeper' | 'pending';
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  // Account activation fields
+  isActive: boolean;
+  activatedAt?: Date;
+  activatedBy?: mongoose.Types.ObjectId;
+  pendingReferralCode?: string; // Stores referral code temporarily until account activation
   // MLM fields
   referredBy?: mongoose.Types.ObjectId;
   leftChild?: mongoose.Types.ObjectId;
@@ -85,6 +90,24 @@ const userSchema = new Schema<IUser>(
     isSuperAdmin: {
       type: Boolean,
       default: false,
+    },
+    // Account activation fields
+    isActive: {
+      type: Boolean,
+      default: false,
+      index: true, // For querying pending users
+    },
+    activatedAt: {
+      type: Date,
+    },
+    activatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    pendingReferralCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
     },
     // MLM fields
     referredBy: {

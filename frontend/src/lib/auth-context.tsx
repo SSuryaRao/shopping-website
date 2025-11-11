@@ -36,6 +36,7 @@ interface AuthContextType {
   selectAccount: (uniqueUserId: string) => Promise<void>;
   switchToAccount: (uniqueUserId: string) => Promise<void>;
   clearAccountOptions: () => void;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -211,9 +212,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear Firebase auth
       await signOut(auth);
+
+      // Clear local state
+      setUser(null);
+      setFirebaseUser(null);
       setAccountOptions(null);
       setTempToken(null);
+
+      // Clear API client tokens
+      apiClient.clearTokens();
+
+      // Redirect to home page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;
@@ -318,6 +332,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTempToken(null);
   };
 
+  // NEW: Refresh user profile data
+  const refreshUser = async () => {
+    try {
+      if (!firebaseUser) {
+        console.log('No firebase user to refresh');
+        return;
+      }
+
+      const token = await firebaseUser.getIdToken(true);
+      apiClient.setAuthToken(token);
+
+      const userProfile = await apiClient.getUserProfile();
+      console.log('User profile refreshed:', userProfile);
+      setUser(userProfile);
+    } catch (error) {
+      console.error('Error refreshing user profile:', error);
+      // Don't throw - just log the error
+    }
+  };
+
   const value = {
     user,
     firebaseUser,
@@ -333,6 +367,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     selectAccount,
     switchToAccount,
     clearAccountOptions,
+    refreshUser,
     logout,
   };
 

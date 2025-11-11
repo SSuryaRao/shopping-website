@@ -147,5 +147,30 @@ export const requireSuperAdmin = (
   next();
 };
 
+export const requireActiveAccount = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      message: 'Authentication required',
+    });
+    return;
+  }
+
+  if (!req.user.isActive) {
+    res.status(403).json({
+      success: false,
+      message: 'Account not activated',
+      error: 'Your account is pending admin activation. Please contact support.',
+    });
+    return;
+  }
+
+  next();
+};
+
 // Export verifyToken as alias for authenticateToken
 export const verifyToken = authenticateToken;

@@ -7,13 +7,15 @@
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "fix-index": "ts-node src/scripts/fixFirebaseUidIndex.ts"
+    "fix-index": "ts-node src/scripts/fixFirebaseUidIndex.ts",
+    "migrate:activate-users": "ts-node src/scripts/migrate-activate-users.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/storage": "^7.17.3",
     "@types/jsonwebtoken": "^9.0.10",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",

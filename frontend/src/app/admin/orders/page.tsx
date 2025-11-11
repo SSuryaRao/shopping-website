@@ -267,7 +267,7 @@ export default function AdminOrdersPage() {
                       {order.quantity}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      ${order.totalPrice.toFixed(2)}
+                      ₹{order.totalPrice.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -443,10 +443,10 @@ export default function AdminOrdersPage() {
                       </td>
                       <td className="py-4 text-center text-gray-900">{selectedOrderForBill.quantity}</td>
                       <td className="py-4 text-right text-gray-900">
-                        ${selectedOrderForBill.productId.price.toFixed(2)}
+                        ₹{selectedOrderForBill.productId.price.toFixed(2)}
                       </td>
                       <td className="py-4 text-right font-semibold text-gray-900">
-                        ${(selectedOrderForBill.productId.price * selectedOrderForBill.quantity).toFixed(2)}
+                        ₹{(selectedOrderForBill.productId.price * selectedOrderForBill.quantity).toFixed(2)}
                       </td>
                     </tr>
                   </tbody>
@@ -458,7 +458,7 @@ export default function AdminOrdersPage() {
                     <div className="flex justify-between py-2 border-t border-gray-200">
                       <span className="text-gray-700">Subtotal:</span>
                       <span className="font-semibold text-gray-900">
-                        ${(selectedOrderForBill.productId.price * selectedOrderForBill.quantity).toFixed(2)}
+                        ₹{(selectedOrderForBill.productId.price * selectedOrderForBill.quantity).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between py-2">
@@ -470,7 +470,7 @@ export default function AdminOrdersPage() {
                     <div className="flex justify-between py-3 border-t-2 border-gray-300">
                       <span className="text-lg font-bold text-gray-900">Total Amount:</span>
                       <span className="text-lg font-bold text-indigo-600">
-                        ${selectedOrderForBill.totalPrice.toFixed(2)}
+                        ₹{selectedOrderForBill.totalPrice.toFixed(2)}
                       </span>
                     </div>
                   </div>

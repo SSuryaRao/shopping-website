@@ -5,10 +5,12 @@ import { Users, ChevronDown, ChevronRight, DollarSign, Mail, Hash } from 'lucide
 
 interface TreeNode {
   id: string;
+  uniqueUserId: string;
   name: string;
   email: string;
   referralCode?: string;
   totalEarnings: number;
+  totalPoints: number;
   left: TreeNode | null;
   right: TreeNode | null;
   hasChildren: boolean;
@@ -65,10 +67,9 @@ const TreeNodeComponent = ({ node, position = 'root', onNodeClick }: TreeNodePro
             <h3 className="font-bold text-gray-900 text-sm mb-1 truncate">{node.name}</h3>
             <p className="text-xs text-gray-500 mb-2 truncate">{node.email}</p>
 
-            {/* Earnings Badge */}
+            {/* Points Badge */}
             <div className="flex items-center justify-center bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg py-1.5 px-2 mb-2">
-              <DollarSign className="w-3 h-3 text-yellow-600 mr-1" />
-              <span className="text-xs font-semibold text-yellow-800">₹{node.totalEarnings.toFixed(2)}</span>
+              <span className="text-xs font-semibold text-yellow-800">{node.totalPoints} pts</span>
             </div>
 
             {/* Children Indicator */}
@@ -212,6 +213,14 @@ export default function MLMTree({ treeData }: MLMTreeProps) {
                 <p className="text-lg font-semibold text-gray-900 ml-7">{selectedNode.name}</p>
               </div>
 
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
+                <div className="flex items-center text-indigo-600 mb-2">
+                  <Hash className="w-5 h-5 mr-2" />
+                  <span className="text-sm font-medium">User ID</span>
+                </div>
+                <p className="text-lg font-mono font-bold text-indigo-700 ml-7">{selectedNode.uniqueUserId}</p>
+              </div>
+
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-center text-gray-600 mb-2">
                   <Mail className="w-5 h-5 mr-2" />
@@ -232,10 +241,9 @@ export default function MLMTree({ treeData }: MLMTreeProps) {
 
               <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-4">
                 <div className="flex items-center text-yellow-700 mb-2">
-                  <DollarSign className="w-5 h-5 mr-2" />
-                  <span className="text-sm font-medium">Total Earnings</span>
+                  <span className="text-sm font-medium">Total Points</span>
                 </div>
-                <p className="text-2xl font-bold text-yellow-800 ml-7">₹{selectedNode.totalEarnings.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-yellow-800">{selectedNode.totalPoints} pts</p>
               </div>
             </div>
 

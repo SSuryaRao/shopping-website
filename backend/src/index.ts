@@ -16,8 +16,8 @@ import userRoutes from './routes/user';
 import orderRoutes from './routes/orders';
 import adminRoutes from './routes/admin';
 import inviteRoutes from './routes/invite';
-import paymentRoutes from './routes/payments';
 import mlmRoutes from './routes/mlm';
+import { initializeStorage } from './utils/storage';
 
 console.log('🚀 Starting server...');
 
@@ -71,6 +71,9 @@ const initializeFirebase = () => {
 };
 
 const firebaseInitialized = initializeFirebase();
+
+// Initialize Google Cloud Storage
+const storageInitialized = initializeStorage();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -137,7 +140,6 @@ app.use('/api/v2/auth', authNewRoutes); // New Firebase-first auth routes
 app.use('/api/products', productRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', inviteRoutes);
 app.use('/api/mlm', mlmRoutes);
@@ -151,6 +153,7 @@ app.get('/api/health', (_req, res) => {
     services: {
       mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
       firebase: firebaseInitialized ? 'initialized' : 'not initialized',
+      storage: storageInitialized ? 'initialized' : 'not initialized',
     },
   });
 });
