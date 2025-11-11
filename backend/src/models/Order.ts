@@ -50,7 +50,6 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       enum: ['pending_admin_approval', 'admin_approved', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'],
       default: 'pending_admin_approval',
-      index: true,
     },
     paymentStatus: {
       type: String,

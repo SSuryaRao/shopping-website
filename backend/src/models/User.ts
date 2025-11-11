@@ -35,7 +35,6 @@ const userSchema = new Schema<IUser>(
   {
     firebaseUid: {
       type: String,
-      sparse: true, // Sparse index allows multiple null/undefined values
     },
     uniqueUserId: {
       type: String,

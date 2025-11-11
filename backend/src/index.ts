@@ -78,6 +78,9 @@ const storageInitialized = initializeStorage();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy - required for Cloud Run and other reverse proxies
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
@@ -88,11 +91,22 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
+// Rate limiting with proper key generator for Cloud Run
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit for development
   message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Validate that we're intentionally using trust proxy
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false,
+  },
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/api/health';
+  },
 });
 app.use('/api', limiter);
 

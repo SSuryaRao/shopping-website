@@ -30,7 +30,6 @@ const commissionSchema = new Schema<ICommission>(
       type: Schema.Types.ObjectId,
       ref: 'Order',
       required: true,
-      index: true,
     },
     productId: {
       type: Schema.Types.ObjectId,
