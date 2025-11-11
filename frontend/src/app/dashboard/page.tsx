@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api';
-import { Order } from '@/types';
-import { Star, ShoppingBag, Package, Calendar, TrendingUp, Gift, User } from 'lucide-react';
+import { Order, User } from '@/types';
+import { Star, ShoppingBag, Package, Calendar, TrendingUp, Gift, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -21,7 +21,7 @@ function DashboardContent() {
     totalPointsEarned: 0,
     currentPoints: 0,
   });
-  const [localUserProfile, setLocalUserProfile] = useState<any>(null);
+  const [localUserProfile, setLocalUserProfile] = useState<User | null>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -233,7 +233,7 @@ function DashboardContent() {
         <div className="flex justify-center space-x-2 bg-white/80 backdrop-blur-lg p-2 rounded-2xl shadow-lg mb-8">
           <TabButton tab="overview" label="Overview" icon={TrendingUp} />
           <TabButton tab="orders" label="Orders" icon={Package} />
-          <TabButton tab="profile" label="Profile" icon={User} />
+          <TabButton tab="profile" label="Profile" icon={UserIcon} />
         </div>
 
         {/* Tab Content */}
@@ -638,7 +638,7 @@ function DashboardContent() {
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
                       <div className="h-12 w-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                        <User className="h-6 w-6 text-white" />
+                        <UserIcon className="h-6 w-6 text-white" />
                       </div>
                     </div>
                     <div className="ml-4 flex-1">

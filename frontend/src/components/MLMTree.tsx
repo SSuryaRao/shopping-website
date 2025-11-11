@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, ChevronDown, ChevronRight, DollarSign, Mail, Hash } from 'lucide-react';
+import { Users, ChevronDown, ChevronRight, Mail, Hash } from 'lucide-react';
 
 interface TreeNode {
   id: string;

@@ -1,4 +1,5 @@
 export interface User {
+  _id?: string; // MongoDB ID
   id: string;
   uniqueUserId: string; // Unique profile ID (BRI123456)
   firebaseUid?: string; // Firebase authentication ID (optional for backwards compatibility)
@@ -134,8 +135,17 @@ export interface Product {
 
 export interface Order {
   _id: string;
-  userId: string;
-  productId: string;
+  userId: string | {
+    _id: string;
+    name: string;
+    uniqueUserId: string;
+    isActive: boolean;
+  };
+  productId: string | {
+    _id: string;
+    name: string;
+    price: number;
+  };
   product: Product;
   quantity: number;
   totalPrice: number;

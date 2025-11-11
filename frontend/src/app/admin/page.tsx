@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api';
-import { Product } from '@/types';
+import { Product, User, Order } from '@/types';
 import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, UserPlus, ShoppingCart, Search, UserX, UserCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -14,13 +14,13 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
-  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'users' | 'orders' | 'active'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'users' | 'orders' | 'active' | 'purchase-for-user'>('products');
 
   // Search and filter states
   const [pendingUsersSearch, setPendingUsersSearch] = useState('');
@@ -73,8 +73,7 @@ export default function AdminPage() {
       setAllUsers(allUsersData.data || []);
       setPendingOrders(ordersData.data || []);
 
-      const activeUsersCount = (allUsersData.data || []).filter((u: any) => u.isActive).length;
-      const inactiveUsersCount = (allUsersData.data || []).filter((u: any) => !u.isActive).length;
+      const inactiveUsersCount = (allUsersData.data || []).filter((u: User) => !u.isActive).length;
 
       setStats({
         totalProducts: productsData.length,
@@ -130,7 +129,7 @@ export default function AdminPage() {
   };
 
   // Filter functions for search and status
-  const filteredPendingUsers = pendingUsers.filter((user: any) => {
+  const filteredPendingUsers = pendingUsers.filter((user: User) => {
     const searchLower = pendingUsersSearch.toLowerCase();
     return (
       user.uniqueUserId.toLowerCase().includes(searchLower) ||
@@ -140,7 +139,7 @@ export default function AdminPage() {
     );
   });
 
-  const filteredActiveUsers = allUsers.filter((user: any) => {
+  const filteredActiveUsers = allUsers.filter((user: User) => {
     const searchLower = activeUsersSearch.toLowerCase();
     const matchesSearch = (
       user.uniqueUserId.toLowerCase().includes(searchLower) ||
@@ -163,9 +162,10 @@ export default function AdminPage() {
       await apiClient.approveOrder(orderId, notes || '');
       alert('Order approved successfully! Points and commissions distributed.');
       await fetchAdminData(); // Refresh data
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error approving order:', error);
-      alert(error.response?.data?.message || 'Failed to approve order');
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to approve order';
+      alert(errorMessage);
     }
   };
 
@@ -550,7 +550,7 @@ export default function AdminPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold text-gray-900">All Users</h3>
-                <p className="text-sm text-gray-600 mt-1">{filteredActiveUsers.length} users ({allUsers.filter((u: any) => u.isActive).length} active, {allUsers.filter((u: any) => !u.isActive).length} inactive)</p>
+                <p className="text-sm text-gray-600 mt-1">{filteredActiveUsers.length} users ({allUsers.filter((u: User) => u.isActive).length} active, {allUsers.filter((u: User) => !u.isActive).length} inactive)</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 {/* Filter Dropdown */}
@@ -592,8 +592,8 @@ export default function AdminPage() {
             <>
             {/* Mobile Card View */}
             <div className="block lg:hidden p-4 space-y-4">
-              {filteredActiveUsers.map((user: any) => (
-                <div key={user._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              {filteredActiveUsers.map((user: User) => (
+                <div key={user._id!} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
@@ -624,7 +624,7 @@ export default function AdminPage() {
                   <div className="mt-3">
                     {user.isActive ? (
                       <button
-                        onClick={() => handleDeactivateUser(user._id, user.name)}
+                        onClick={() => handleDeactivateUser(user._id!, user.name)}
                         className="w-full inline-flex items-center justify-center bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-3 rounded-lg hover:from-red-700 hover:to-orange-700 transition-all font-medium shadow-md"
                       >
                         <UserX className="h-4 w-4 mr-2" />
@@ -632,7 +632,7 @@ export default function AdminPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleActivateUser(user._id)}
+                        onClick={() => handleActivateUser(user._id!)}
                         className="w-full inline-flex items-center justify-center bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-md"
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
@@ -659,8 +659,8 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredActiveUsers.map((user: any) => (
-                    <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                  {filteredActiveUsers.map((user: User) => (
+                    <tr key={user._id!} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="bg-blue-100 rounded-lg px-3 py-1">
@@ -700,7 +700,7 @@ export default function AdminPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {user.isActive ? (
                           <button
-                            onClick={() => handleDeactivateUser(user._id, user.name)}
+                            onClick={() => handleDeactivateUser(user._id!, user.name)}
                             className="inline-flex items-center bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-orange-700 transition-all font-medium shadow-md hover:shadow-lg transform hover:scale-105"
                           >
                             <UserX className="h-4 w-4 mr-2" />
@@ -708,7 +708,7 @@ export default function AdminPage() {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleActivateUser(user._id)}
+                            onClick={() => handleActivateUser(user._id!)}
                             className="inline-flex items-center bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-md hover:shadow-lg transform hover:scale-105"
                           >
                             <UserPlus className="h-4 w-4 mr-2" />
@@ -761,8 +761,8 @@ export default function AdminPage() {
             <>
             {/* Mobile Card View */}
             <div className="block md:hidden p-4 space-y-4">
-              {filteredPendingUsers.map((user: any) => (
-                <div key={user._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              {filteredPendingUsers.map((user: User) => (
+                <div key={user._id!} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <div className="bg-blue-100 rounded-lg px-3 py-1 inline-block mb-2">
@@ -776,12 +776,12 @@ export default function AdminPage() {
                         }`}>
                           {user.role}
                         </span>
-                        <span className="text-xs text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</span>
+                        <span className="text-xs text-gray-500">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</span>
                       </div>
                     </div>
                   </div>
                   <button
-                    onClick={() => handleActivateUser(user._id)}
+                    onClick={() => handleActivateUser(user._id!)}
                     className="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
                   >
                     Activate User
@@ -804,8 +804,8 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredPendingUsers.map((user: any) => (
-                    <tr key={user._id} className="hover:bg-gray-50">
+                  {filteredPendingUsers.map((user: User) => (
+                    <tr key={user._id!} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="bg-blue-100 rounded-lg px-3 py-1">
@@ -823,11 +823,11 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
-                          onClick={() => handleActivateUser(user._id)}
+                          onClick={() => handleActivateUser(user._id!)}
                           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
                         >
                           Activate
@@ -863,24 +863,24 @@ export default function AdminPage() {
             <>
             {/* Mobile Card View */}
             <div className="block lg:hidden p-4 space-y-4">
-              {pendingOrders.map((order: any) => (
+              {pendingOrders.map((order: Order) => (
                 <div key={order._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-bold text-gray-500">#{order._id.slice(-6)}</span>
                         <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                          order.userId?.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          (typeof order.userId === 'object' && order.userId?.isActive) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {order.userId?.isActive ? 'Active' : 'Inactive'}
+                          {(typeof order.userId === 'object' && order.userId?.isActive) ? 'Active' : 'Inactive'}
                         </span>
                       </div>
-                      <h3 className="font-semibold text-gray-900">{order.userId?.name}</h3>
-                      <p className="text-xs text-gray-500">{order.userId?.uniqueUserId}</p>
+                      <h3 className="font-semibold text-gray-900">{typeof order.userId === 'object' ? order.userId?.name : 'N/A'}</h3>
+                      <p className="text-xs text-gray-500">{typeof order.userId === 'object' ? order.userId?.uniqueUserId : 'N/A'}</p>
                       <div className="mt-3 space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Product:</span>
-                          <span className="font-medium text-gray-900">{order.productId?.name}</span>
+                          <span className="font-medium text-gray-900">{typeof order.productId === 'object' ? order.productId?.name : 'N/A'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Quantity:</span>
@@ -904,7 +904,7 @@ export default function AdminPage() {
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleApproveOrder(order._id)}
-                      disabled={!order.userId?.isActive}
+                      disabled={!(typeof order.userId === 'object' && order.userId?.isActive)}
                       className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Approve
@@ -916,7 +916,7 @@ export default function AdminPage() {
                       Reject
                     </button>
                   </div>
-                  {!order.userId?.isActive && (
+                  {!(typeof order.userId === 'object' && order.userId?.isActive) && (
                     <p className="text-xs text-red-600 mt-2 text-center">User must be activated first</p>
                   )}
                 </div>
@@ -940,25 +940,25 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {pendingOrders.map((order: any) => (
+                  {pendingOrders.map((order: Order) => (
                     <tr key={order._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order._id.slice(-6)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{order.userId?.name}</div>
-                        <div className="text-xs text-gray-500">{order.userId?.uniqueUserId}</div>
+                        <div className="text-sm font-medium text-gray-900">{typeof order.userId === 'object' ? order.userId?.name : 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{typeof order.userId === 'object' ? order.userId?.uniqueUserId : 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{order.productId?.name}</div>
-                        <div className="text-xs text-gray-500">₹{order.productId?.price}</div>
+                        <div className="text-sm text-gray-900">{typeof order.productId === 'object' ? order.productId?.name : 'N/A'}</div>
+                        <div className="text-xs text-gray-500">₹{typeof order.productId === 'object' ? order.productId?.price : 0}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.quantity}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{order.totalPrice.toFixed(2)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">+{order.pointsEarned} pts</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                          order.userId?.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          (typeof order.userId === 'object' && order.userId?.isActive) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {order.userId?.isActive ? 'Active' : 'Inactive'}
+                          {(typeof order.userId === 'object' && order.userId?.isActive) ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -967,9 +967,9 @@ export default function AdminPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                         <button
                           onClick={() => handleApproveOrder(order._id)}
-                          disabled={!order.userId?.isActive}
+                          disabled={!(typeof order.userId === 'object' && order.userId?.isActive)}
                           className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={!order.userId?.isActive ? 'User must be activated first' : 'Approve order'}
+                          title={!(typeof order.userId === 'object' && order.userId?.isActive) ? 'User must be activated first' : 'Approve order'}
                         >
                           Approve
                         </button>
@@ -1510,8 +1510,8 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
 // Purchase for User Component
 function PurchaseForUserTab() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -1582,7 +1582,7 @@ function PurchaseForUserTab() {
           'Authorization': `Bearer ${apiClient.getAuthToken()}`,
         },
         body: JSON.stringify({
-          userId: selectedUser._id,
+          userId: selectedUser._id!,
           productId: selectedProduct._id,
           quantity,
         }),
@@ -1683,7 +1683,7 @@ function PurchaseForUserTab() {
             <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
               {searchResults.map((user) => (
                 <div
-                  key={user._id}
+                  key={user._id!}
                   onClick={() => {
                     setSelectedUser(user);
                     setSearchResults([]);
@@ -1724,7 +1724,7 @@ function PurchaseForUserTab() {
               >
                 <div className="flex items-center gap-3">
                   {product.imageURL && (
-                    <img src={product.imageURL} alt={product.name} className="w-16 h-16 object-cover rounded" />
+                    <Image src={product.imageURL} alt={product.name} width={64} height={64} className="w-16 h-16 object-cover rounded" />
                   )}
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900">{product.name}</p>

@@ -39,7 +39,7 @@ export default function CartPage() {
         pointsToRedeem: pointsToRedeem,
       };
 
-      const order = await apiClient.createOrder(orderData);
+      await apiClient.createOrder(orderData);
 
       // Order submitted successfully
       alert('Order submitted successfully! Awaiting admin approval.');

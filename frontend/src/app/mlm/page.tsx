@@ -53,7 +53,7 @@ export default function MLMDashboard() {
     return token;
   }, []);
 
-  const fetchMLMDataRef = useRef<() => Promise<void>>();
+  const fetchMLMDataRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const isFetchingRef = useRef(false);
 
   fetchMLMDataRef.current = async () => {
@@ -393,7 +393,7 @@ export default function MLMDashboard() {
             // Simple View - Direct Downline
             <>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 sm:hidden">
-              <p className="text-xs text-blue-800">💡 Tip: Tap "Show Tree View" to see your full network tree. You can scroll horizontally to explore.</p>
+              <p className="text-xs text-blue-800">💡 Tip: Tap &quot;Show Tree View&quot; to see your full network tree. You can scroll horizontally to explore.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Position */}
