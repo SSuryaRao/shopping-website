@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Mail, Lock, Eye, EyeOff, Smartphone, User } from 'lucide-react';
 import AccountSelector from '@/components/AccountSelector';
@@ -22,6 +22,8 @@ export default function LoginPage() {
     loading: authLoading
   } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const hasRedirected = useRef(false);
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('mobile');
   const [formData, setFormData] = useState({
     mobile: '',
@@ -33,13 +35,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirect when user is authenticated
+  // Only redirect if user is already logged in AND they're actually on the login page
+  // This prevents redirects during hot reload when on other pages
   useEffect(() => {
-    if (user && !authLoading) {
-      console.log('User authenticated, redirecting to dashboard');
-      router.push('/dashboard');
+    if (user && !authLoading && !accountOptions && pathname === '/login' && !hasRedirected.current) {
+      console.log('Already logged in, redirecting from login page to dashboard');
+      hasRedirected.current = true;
+      router.replace('/dashboard');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, accountOptions, pathname, router]); // Proper dependencies
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

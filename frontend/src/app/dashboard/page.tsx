@@ -25,14 +25,10 @@ function DashboardContent() {
 
   const fetchDashboardData = async () => {
     try {
-      console.log('Fetching dashboard data...');
       const [ordersData, userProfile] = await Promise.all([
         apiClient.getUserOrders(),
         apiClient.getUserProfile(),
       ]);
-
-      console.log('Orders data:', ordersData);
-      console.log('User profile:', userProfile);
 
       // Store the fresh user profile locally
       setLocalUserProfile(userProfile);
@@ -77,7 +73,6 @@ function DashboardContent() {
     if (!user || authLoading) return;
 
     const intervalId = setInterval(async () => {
-      console.log('Auto-refreshing user profile...');
       await refreshUser();
       // Also refresh local dashboard data
       const freshProfile = await apiClient.getUserProfile();

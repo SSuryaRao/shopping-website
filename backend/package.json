@@ -8,7 +8,13 @@
     "dev": "nodemon src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "fix-index": "ts-node src/scripts/fixFirebaseUidIndex.ts",
-    "migrate:activate-users": "ts-node src/scripts/migrate-activate-users.ts"
+    "migrate:activate-users": "ts-node src/scripts/migrate-activate-users.ts",
+    "fresh-start": "ts-node scripts/fresh-start.ts",
+    "fresh-start:confirmed": "ts-node scripts/fresh-start-confirmed.ts",
+    "fresh-start:keep-products": "ts-node scripts/fresh-start-confirmed.ts --keep-products",
+    "create-superadmin": "ts-node scripts/createSuperAdmin.ts",
+    "make-admin": "ts-node scripts/makeUserAdmin.ts",
+    "test-login": "ts-node scripts/testLoginResponse.ts"
   },
   "keywords": [],
   "author": "",

@@ -247,6 +247,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Single account - auto login
         apiClient.setAuthToken(response.token);
+        console.log('[AUTH] Mobile login response.user:', JSON.stringify(response.user, null, 2));
+        console.log('[AUTH] isAdmin value:', response.user.isAdmin);
+        console.log('[AUTH] isSuperAdmin value:', response.user.isSuperAdmin);
         setUser(response.user);
         setAccountOptions(null);
         setTempToken(null);
