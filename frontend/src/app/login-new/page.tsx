@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context-new';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -21,6 +21,8 @@ export default function LoginPage() {
   } = useAuth();
 
   const router = useRouter();
+  const pathname = usePathname();
+  const hasRedirected = useRef(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -29,13 +31,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirect when user is authenticated and has a profile selected
+  // Only redirect if user is already logged in AND they're actually on the login-new page
+  // This prevents redirects during hot reload when on other pages
   useEffect(() => {
-    if (user && !authLoading && !profileOptions && !needsProfileCreation) {
-      console.log('User authenticated, redirecting to dashboard');
-      router.push('/dashboard');
+    if (user && !authLoading && !profileOptions && !needsProfileCreation && pathname === '/login-new' && !hasRedirected.current) {
+      console.log('Already logged in, redirecting from login page to dashboard');
+      hasRedirected.current = true;
+      router.replace('/dashboard');
     }
-  }, [user, authLoading, profileOptions, needsProfileCreation, router]);
+  }, [user, authLoading, profileOptions, needsProfileCreation, pathname, router]); // Proper dependencies
 
   // Redirect to profile creation if needed
   useEffect(() => {

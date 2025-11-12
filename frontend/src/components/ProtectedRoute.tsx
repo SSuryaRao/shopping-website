@@ -17,21 +17,15 @@ export default function ProtectedRoute({
   requireSuperAdmin = false,
   redirectTo = '/login'
 }: ProtectedRouteProps) {
-  const { user, firebaseUser, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
-    // Not authenticated at all
-    if (!firebaseUser) {
-      router.push(redirectTo);
-      return;
-    }
-
-    // Firebase user exists but not registered in our backend
+    // Not authenticated at all - check for backend user (works for both mobile and Google login)
     if (!user) {
-      router.push('/signup');
+      router.push(redirectTo);
       return;
     }
 
@@ -52,7 +46,7 @@ export default function ProtectedRoute({
       router.push('/unauthorized');
       return;
     }
-  }, [user, firebaseUser, loading, router, requireAdmin, requireSuperAdmin, redirectTo]);
+  }, [user, loading, router, requireAdmin, requireSuperAdmin, redirectTo]);
 
   // Show loading state
   if (loading) {
@@ -64,7 +58,7 @@ export default function ProtectedRoute({
   }
 
   // Don't render anything while redirecting
-  if (!firebaseUser || !user || (requireAdmin && !user.isAdmin) || (requireSuperAdmin && !user.isSuperAdmin)) {
+  if (!user || (requireAdmin && !user.isAdmin) || (requireSuperAdmin && !user.isSuperAdmin)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

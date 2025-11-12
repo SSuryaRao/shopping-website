@@ -17,7 +17,8 @@
       "Bash(gcloud app describe:*)",
       "Bash(gcloud projects list:*)",
       "Bash(vercel env add:*)",
-      "Bash(vercel env:*)"
+      "Bash(vercel env:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

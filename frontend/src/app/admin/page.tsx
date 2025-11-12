@@ -36,12 +36,12 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && (!user || !user.isAdmin)) {
-      router.push('/');
-    } else if (user && user.isAdmin) {
+    // ProtectedRoute component handles authentication and admin checks
+    // Just fetch data when user is ready
+    if (!authLoading && user && user.isAdmin) {
       fetchAdminData();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading]);
 
   const fetchAdminData = async () => {
     try {
@@ -60,13 +60,6 @@ export default function AdminPage() {
           return { data: [], count: 0 };
         }),
       ]);
-
-      console.log('Admin data fetched:', {
-        products: productsData.length,
-        pendingUsers: usersData,
-        allUsers: allUsersData,
-        pendingOrders: ordersData
-      });
 
       setProducts(productsData);
       setPendingUsers(usersData.data || []);
@@ -192,10 +185,6 @@ export default function AdminPage() {
         </div>
       </div>
     );
-  }
-
-  if (!user || !user.isAdmin) {
-    return null;
   }
 
   return (
