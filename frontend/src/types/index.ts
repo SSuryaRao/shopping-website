@@ -140,6 +140,8 @@ export interface Order {
     name: string;
     uniqueUserId: string;
     isActive: boolean;
+    email?: string;
+    mobileNumber?: string;
   };
   productId: string | {
     _id: string;
@@ -151,6 +153,11 @@ export interface Order {
   totalPrice: number;
   pointsEarned: number;
   status: 'pending_admin_approval' | 'admin_approved' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'pending';
+  paymentMethod?: 'cash' | 'qr';
+  cashPaidTo?: string;
+  paymentScreenshot?: string; // Private storage key - view via apiClient.getPaymentScreenshotUrl
+  checkoutId?: string;
+  checkoutTotal?: number;
   adminApprovedBy?: string;
   adminApprovedAt?: Date;
   adminNotes?: string;
@@ -212,6 +219,39 @@ export interface DownlineUser {
   email: string;
   referralCode?: string;
   totalEarnings: number;
+}
+
+export interface RewardItem {
+  _id: string;
+  name: string;
+  description: string;
+  imageURL: string;
+  pointsRequired: number;
+  stock: number;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface RewardRedemption {
+  _id: string;
+  userId: string | {
+    _id: string;
+    name: string;
+    uniqueUserId: string;
+    email?: string;
+    mobileNumber?: string;
+  };
+  rewardItemId: string | {
+    _id: string;
+    name: string;
+    imageURL: string;
+  };
+  rewardName: string;
+  pointsSpent: number;
+  status: 'pending' | 'approved' | 'rejected';
+  adminNotes?: string;
+  processedAt?: Date;
+  createdAt: Date;
 }
 
 export interface MLMTreeNode {

@@ -7,7 +7,7 @@ import { Commission, CommissionSummary, DownlineUser, MLMTreeNode } from '@/type
 import { Copy, Users, DollarSign, TrendingUp, Share2, CheckCircle, Network, ChevronDown } from 'lucide-react';
 import MLMTree from '@/components/MLMTree';
 
-export default function MLMDashboard() {
+export default function ReferEarnDashboard() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
 
@@ -233,7 +233,7 @@ export default function MLMDashboard() {
         setJoinError(data.message);
       }
     } catch (err) {
-      setJoinError('Failed to join MLM tree. Please try again.');
+      setJoinError('Failed to join the referral network. Please try again.');
       console.error('Error joining tree:', err);
     } finally {
       setJoiningTree(false);
@@ -243,7 +243,7 @@ export default function MLMDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading MLM Dashboard...</div>
+        <div className="text-lg">Loading Refer &amp; Earn...</div>
       </div>
     );
   }
@@ -251,7 +251,7 @@ export default function MLMDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">MLM Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Refer &amp; Earn</h1>
 
         {/* Referral Section */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-4 sm:p-6 mb-6 sm:mb-8 text-white">
@@ -259,7 +259,7 @@ export default function MLMDashboard() {
             <Share2 className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
             <h2 className="text-lg sm:text-xl font-semibold">Your Referral Link</h2>
           </div>
-          <p className="text-sm mb-4 opacity-90">Share this link to invite others and earn commissions on their purchases</p>
+          <p className="text-sm mb-4 opacity-90">Share this link to invite others and earn points on their purchases</p>
           <div className="bg-white bg-opacity-20 rounded-lg p-3 sm:p-4 mb-3">
             <p className="text-xs sm:text-sm font-mono break-all text-gray-900">{referralLink || 'Loading your referral link...'}</p>
           </div>
@@ -281,7 +281,7 @@ export default function MLMDashboard() {
           </div>
         </div>
 
-        {/* Join MLM Tree Section - Only show if user doesn't have a referrer */}
+        {/* Join Referral Tree Section - Only show if user doesn't have a referrer */}
         {!hasReferrer && (
           <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg shadow-lg p-6 mb-8">
             <div className="flex items-start mb-4">
@@ -289,9 +289,9 @@ export default function MLMDashboard() {
                 <Users className="w-6 h-6 text-yellow-600" />
               </div>
               <div className="ml-3 flex-1">
-                <h3 className="text-lg font-semibold text-yellow-900 mb-2">Join the MLM Network</h3>
+                <h3 className="text-lg font-semibold text-yellow-900 mb-2">Join a Referral Network</h3>
                 <p className="text-sm text-yellow-800 mb-4">
-                  You haven&apos;t joined anyone&apos;s network yet. Enter a referral code from someone who invited you to join their downline and start earning commissions.
+                  You haven&apos;t joined anyone&apos;s network yet. Enter a referral code from someone who invited you to join their network and start earning points.
                 </p>
 
                 {joinSuccess && (
@@ -376,7 +376,7 @@ export default function MLMDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center">
               <Network className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-gray-700" />
-              <h2 className="text-lg sm:text-xl font-semibold text-black">Your MLM Network</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-black">Your Referral Network</h2>
             </div>
             {treeData && (
               <button
@@ -472,13 +472,13 @@ export default function MLMDashboard() {
 
         {/* Recent Commissions */}
         <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <h2 className="text-xl font-semibold mb-6">Recent Commissions</h2>
+          <h2 className="text-xl font-semibold mb-6">Recent Referral Points</h2>
 
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
             {commissions.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No commissions yet. Start referring to earn!
+                No referral points yet. Start referring to earn!
               </div>
             ) : (
               commissions.map((commission) => (
@@ -548,7 +548,7 @@ export default function MLMDashboard() {
                 {commissions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                      No commissions yet. Start referring to earn!
+                      No referral points yet. Start referring to earn!
                     </td>
                   </tr>
                 ) : (

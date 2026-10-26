@@ -267,7 +267,7 @@ function CreateProfileForm() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  Enter a referral code to join someone&apos;s MLM network
+                  Enter a referral code to join someone&apos;s referral network
                 </p>
               </div>
             )}
@@ -322,7 +322,7 @@ function CreateProfileForm() {
 
           <div className="pt-4 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center">
-              You can create up to 5 profiles with this account. Each profile has its own points and MLM position.
+              You can create up to 5 profiles with this account. Each profile has its own points and referral position.
             </p>
           </div>
         </div>

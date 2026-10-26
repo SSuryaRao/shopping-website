@@ -224,7 +224,7 @@ function SignUpForm() {
                   <div>
                     <h3 className="text-sm font-bold text-yellow-800 mb-1">Account Pending Activation</h3>
                     <p className="text-sm text-yellow-700">
-                      Your account is awaiting admin activation. Once activated, you will be able to access all features including MLM referrals and commissions.
+                      Your account is awaiting admin activation. Once activated, you will be able to access all features including Refer &amp; Earn and Rewards.
                     </p>
                   </div>
                 </div>
@@ -515,7 +515,7 @@ function SignUpForm() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  Have a referral code? Enter it to join someone&apos;s MLM network.
+                  Have a referral code? Enter it to join someone&apos;s referral network.
                 </p>
               </div>
             )}

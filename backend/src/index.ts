@@ -17,6 +17,7 @@ import orderRoutes from './routes/orders';
 import adminRoutes from './routes/admin';
 import inviteRoutes from './routes/invite';
 import mlmRoutes from './routes/mlm';
+import rewardRoutes from './routes/rewards';
 import { initializeStorage } from './utils/storage';
 
 console.log('🚀 Starting server...');
@@ -86,7 +87,8 @@ app.use(helmet());
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3000',
-    'https://shopping-website-frontend-one.vercel.app'
+    'https://shopping-website-frontend-one.vercel.app',
+    'https://smartshopy.vercel.app'
   ],
   credentials: true,
 }));
@@ -157,6 +159,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', inviteRoutes);
 app.use('/api/mlm', mlmRoutes);
+app.use('/api/rewards', rewardRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -188,6 +191,14 @@ app.use((error: any, _req: express.Request, res: express.Response, _next: expres
       success: false,
       message: 'Validation error',
       errors: error.errors,
+    });
+  }
+
+  // Upload problems (file too large, unexpected field, ...) are the client's fault, not a server error
+  if (error.name === 'MulterError') {
+    return res.status(400).json({
+      success: false,
+      message: error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB' : error.message,
     });
   }
 

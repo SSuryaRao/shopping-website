@@ -18,7 +18,6 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -51,7 +50,8 @@ export default function ProductPage() {
     alert(`Added ${quantity} ${product.name}(s) to cart!`);
   };
 
-  const handleBuyNow = async () => {
+  // Buy Now goes through the cart so the user picks a payment method (Cash / UPI QR)
+  const handleBuyNow = () => {
     if (!user) {
       router.push('/login');
       return;
@@ -59,27 +59,8 @@ export default function ProductPage() {
 
     if (!product) return;
 
-    setPurchasing(true);
-    setError('');
-
-    try {
-      const orderData = {
-        items: [{
-          productId: product._id,
-          quantity,
-        }],
-      };
-
-      await apiClient.createOrder(orderData);
-
-      alert(`Order placed successfully! You earned ${product.points * quantity} points!`);
-      router.push('/dashboard?tab=orders');
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to place order';
-      setError(errorMessage);
-    } finally {
-      setPurchasing(false);
-    }
+    addItem(product, quantity);
+    router.push('/cart');
   };
 
   const increaseQuantity = () => {
@@ -278,17 +259,11 @@ export default function ProductPage() {
 
                 <button
                   onClick={handleBuyNow}
-                  disabled={purchasing || product.stock === 0}
+                  disabled={product.stock === 0}
                   className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors text-base"
                 >
-                  {purchasing ? (
-                    'Processing...'
-                  ) : (
-                    <>
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      Buy Now
-                    </>
-                  )}
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  Buy Now
                 </button>
               </div>
 

@@ -151,7 +151,7 @@ export default function ProductCommissionPage() {
         </button>
 
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">MLM Points Distribution</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Refer &amp; Earn Points Distribution</h1>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-600">Product:</p>

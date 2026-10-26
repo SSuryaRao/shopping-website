@@ -1,6 +1,17 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const API_V2_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/v2` : 'http://localhost:5000/api/v2';
 
+// Error thrown for non-2xx responses, carrying the HTTP status (e.g. 401 = session no longer valid)
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 export class ApiClient {
   private baseURL: string;
   private v2BaseURL: string;
@@ -68,7 +79,7 @@ export class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `API request failed: ${response.status} ${response.statusText}`);
+        throw new ApiError(errorData.message || `API request failed: ${response.status} ${response.statusText}`, response.status);
       }
 
       const result = await response.json();
@@ -411,11 +422,26 @@ export class ApiClient {
   }
 
   // Order methods
-  async createOrder(orderData: { items: Array<{ productId: string; quantity: number }>; pointsToRedeem?: number }) {
+  async createOrder(orderData: {
+    items: Array<{ productId: string; quantity: number }>;
+    paymentMethod: 'cash' | 'qr';
+    cashPaidTo?: string;
+    paymentScreenshot?: File;
+  }) {
+    const formData = new FormData();
+    formData.append('items', JSON.stringify(orderData.items));
+    formData.append('paymentMethod', orderData.paymentMethod);
+    if (orderData.cashPaidTo) formData.append('cashPaidTo', orderData.cashPaidTo);
+    if (orderData.paymentScreenshot) formData.append('paymentScreenshot', orderData.paymentScreenshot);
+
     return this.request('/orders', {
       method: 'POST',
-      body: JSON.stringify(orderData),
+      body: formData,
     });
+  }
+
+  async getPaymentConfig(): Promise<{ upiId: string; payeeName: string }> {
+    return this.request('/orders/payment-config');
   }
 
   async getOrder(id: string) {
@@ -557,6 +583,80 @@ export class ApiClient {
 
   async rejectOrder(orderId: string, reason: string) {
     return this.request(`/admin/orders/${orderId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  // Returns an object URL for the payment screenshot (caller must URL.revokeObjectURL it)
+  async getPaymentScreenshotUrl(orderId: string): Promise<string> {
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/admin/orders/${orderId}/payment-screenshot`, { headers });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to load payment screenshot');
+    }
+
+    return URL.createObjectURL(await response.blob());
+  }
+
+  // Rewards methods
+  async getRewardItems() {
+    return this.request('/rewards');
+  }
+
+  async getMyRedemptions() {
+    return this.request('/rewards/my-redemptions');
+  }
+
+  async redeemReward(itemId: string) {
+    return this.request(`/rewards/${itemId}/redeem`, {
+      method: 'POST',
+    });
+  }
+
+  // Admin rewards methods
+  async getAdminRewardItems() {
+    return this.request('/rewards/admin/items');
+  }
+
+  async createRewardItem(data: FormData) {
+    return this.request('/rewards/admin/items', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  async updateRewardItem(id: string, data: FormData) {
+    return this.request(`/rewards/admin/items/${id}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  async deactivateRewardItem(id: string) {
+    return this.request(`/rewards/admin/items/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getRedemptions(status?: 'pending' | 'approved' | 'rejected') {
+    return this.request(`/rewards/admin/redemptions${status ? `?status=${status}` : ''}`);
+  }
+
+  async approveRedemption(id: string, adminNotes?: string) {
+    return this.request(`/rewards/admin/redemptions/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ adminNotes }),
+    });
+  }
+
+  async rejectRedemption(id: string, reason: string) {
+    return this.request(`/rewards/admin/redemptions/${id}/reject`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     });

@@ -1,76 +1,13 @@
 import { Router, Response } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import mongoose from 'mongoose';
 import { authenticateToken, AuthenticatedRequest, requireAdmin } from '../middleware/auth';
 import Product from '../models/Product';
 import User from '../models/User';
 import Order from '../models/Order';
 import { distributeCommissions, addUserToMLMTree } from '../services/mlm.service';
-import { uploadToGCS, getBucket } from '../utils/storage';
+import { imageUpload as upload, uploadToCloudStorage, readPrivateFile } from '../utils/uploads';
 
 const router = Router();
-
-// Configure multer for file uploads
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (_req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
-    }
-  },
-});
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Helper function to upload file to Google Cloud Storage with local fallback
-const uploadToCloudStorage = async (file: Express.Multer.File, fileName: string): Promise<string> => {
-  const bucket = getBucket();
-
-  // Try Google Cloud Storage first
-  if (bucket) {
-    try {
-      const publicUrl = await uploadToGCS(file.buffer, fileName, file.mimetype, 'products');
-      console.log(`✅ Uploaded to GCS: ${fileName}`);
-      return publicUrl;
-    } catch (error) {
-      console.warn('Google Cloud Storage upload failed, falling back to local storage:', error);
-      return uploadToLocalStorage(file, fileName);
-    }
-  } else {
-    console.log('Google Cloud Storage not configured, using local storage');
-    return uploadToLocalStorage(file, fileName);
-  }
-};
-
-// Helper function to upload file to local storage
-const uploadToLocalStorage = async (file: Express.Multer.File, fileName: string): Promise<string> => {
-  const filePath = path.join(uploadsDir, fileName);
-
-  return new Promise((resolve, reject) => {
-    fs.writeFile(filePath, file.buffer, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        // Return URL relative to the server
-        const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-        const publicUrl = `${baseUrl}/uploads/${fileName}`;
-        resolve(publicUrl);
-      }
-    });
-  });
-};
 
 // Get all products (admin)
 router.get('/products', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -531,6 +468,45 @@ router.get('/orders/pending', authenticateToken, requireAdmin, async (_req: Auth
   }
 });
 
+// View the payment screenshot uploaded with a QR payment (admin only)
+router.get('/orders/:orderId/payment-screenshot', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order ID',
+      });
+    }
+
+    const order = await Order.findById(req.params.orderId).select('paymentScreenshot');
+
+    if (!order || !order.paymentScreenshot) {
+      return res.status(404).json({
+        success: false,
+        message: 'No payment screenshot for this order',
+      });
+    }
+
+    const file = await readPrivateFile(order.paymentScreenshot);
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment screenshot file not found',
+      });
+    }
+
+    res.set('Content-Type', file.contentType);
+    res.set('Cache-Control', 'private, no-store');
+    res.send(file.buffer);
+  } catch (error) {
+    console.error('Get payment screenshot error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load payment screenshot',
+    });
+  }
+});
+
 // Approve an order
 router.post('/orders/:orderId/approve', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res: Response): Promise<any> => {
   try {
@@ -584,8 +560,9 @@ router.post('/orders/:orderId/approve', authenticateToken, requireAdmin, async (
       // 2. Distribute MLM commissions (this handles ALL point distribution including buyer reward and upline commissions)
       await distributeCommissions(order._id as mongoose.Types.ObjectId, user._id as mongoose.Types.ObjectId, product);
 
-      // 4. Update order status
+      // 4. Update order status (admin has verified the cash/QR payment)
       order.status = 'completed';
+      order.paymentStatus = 'paid';
       order.adminApprovedBy = adminId;
       order.adminApprovedAt = new Date();
       if (adminNotes) {

@@ -1,54 +1,101 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
 import { apiClient } from '@/lib/api';
-import { Minus, Plus, Trash2, Star, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, Trash2, Star, ShoppingBag, ArrowLeft, Banknote, QrCode, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+type PaymentMethod = 'cash' | 'qr';
 
 export default function CartPage() {
   const { user } = useAuth();
   const { items, updateQuantity, removeItem, clearCart, getSubtotal, getTotalPoints } = useCart();
   const [loading, setLoading] = useState(false);
-  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [cashPaidTo, setCashPaidTo] = useState('');
+  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [upiConfig, setUpiConfig] = useState<{ upiId: string; payeeName: string } | null>(null);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const subtotal = getSubtotal();
   const totalPoints = getTotalPoints();
-  const discount = pointsToRedeem * 0.01; // 1 point = ₹0.01
-  const finalTotal = Math.max(0, subtotal - discount);
+  const finalTotal = subtotal;
 
-  const handlePointsRedemption = (points: number) => {
-    const maxRedeemable = Math.min(user?.totalPoints || 0, Math.floor(subtotal * 100)); // Can't redeem more than order value
-    setPointsToRedeem(Math.min(points, maxRedeemable));
+  // Dynamic UPI link - the QR always carries the current cart total
+  const upiLink = upiConfig?.upiId
+    ? `upi://pay?pa=${upiConfig.upiId}&pn=${encodeURIComponent(upiConfig.payeeName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Smart Shoppy order')}`
+    : '';
+
+  useEffect(() => {
+    if (!user) return;
+    apiClient.getPaymentConfig()
+      .then(setUpiConfig)
+      .catch((err) => console.error('Error loading payment config:', err));
+  }, [user]);
+
+  useEffect(() => {
+    return () => {
+      if (screenshotPreview) URL.revokeObjectURL(screenshotPreview);
+    };
+  }, [screenshotPreview]);
+
+  const handleScreenshotChange = (file: File | null) => {
+    setError('');
+    if (file && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Screenshot must be a JPEG, PNG or WebP image');
+      return;
+    }
+    if (file && file.size > 5 * 1024 * 1024) {
+      setError('Screenshot must be smaller than 5MB');
+      return;
+    }
+    setScreenshot(file);
+    setScreenshotPreview(file ? URL.createObjectURL(file) : null);
   };
 
   const handleCheckout = async () => {
     if (!user || items.length === 0) return;
+    setError('');
+
+    if (!paymentMethod) {
+      setError('Please select a payment method');
+      return;
+    }
+    if (paymentMethod === 'cash' && !cashPaidTo.trim()) {
+      setError('Please enter the name of the person you gave the cash to');
+      return;
+    }
+    if (paymentMethod === 'qr' && !screenshot) {
+      setError('Please upload the payment screenshot');
+      return;
+    }
 
     setLoading(true);
     try {
-      const orderData = {
+      await apiClient.createOrder({
         items: items.map(item => ({
           productId: item.product._id,
           quantity: item.quantity,
         })),
-        pointsToRedeem: pointsToRedeem,
-      };
-
-      await apiClient.createOrder(orderData);
+        paymentMethod,
+        cashPaidTo: paymentMethod === 'cash' ? cashPaidTo.trim() : undefined,
+        paymentScreenshot: paymentMethod === 'qr' ? screenshot ?? undefined : undefined,
+      });
 
       // Order submitted successfully
       alert('Order submitted successfully! Awaiting admin approval.');
       clearCart();
-      setPointsToRedeem(0);
       router.push('/dashboard?tab=orders');
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('Error creating order. Please try again.');
+      setError(error instanceof Error ? error.message : 'Error creating order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -184,44 +231,116 @@ export default function CartPage() {
               </span>
             </div>
 
-            {/* Points Redemption */}
-            <div className="border-t pt-3">
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Redeem Points (Available: {user.totalPoints})
-                </label>
-                <div className="flex space-x-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max={user.totalPoints}
-                    value={pointsToRedeem}
-                    onChange={(e) => {
-                      const value = Math.min(parseInt(e.target.value) || 0, user.totalPoints);
-                      handlePointsRedemption(value);
-                    }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    placeholder="Points to redeem"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">1 point = ₹0.01 discount</p>
-              </div>
-
-              {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Points Discount</span>
-                  <span>-₹{discount.toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-
             <div className="border-t pt-3">
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
                 <span>₹{finalTotal.toFixed(2)}</span>
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Use your points in the <Link href="/rewards" className="text-blue-600 hover:underline">Rewards</Link> tab
+              </p>
             </div>
           </div>
+
+          {/* Payment Method */}
+          <div className="border-t pt-4 mb-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Method</h3>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => { setPaymentMethod('cash'); setError(''); }}
+                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors ${
+                  paymentMethod === 'cash' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Banknote className="h-6 w-6" />
+                <span className="text-sm font-medium">Cash</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPaymentMethod('qr'); setError(''); }}
+                className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-colors ${
+                  paymentMethod === 'qr' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <QrCode className="h-6 w-6" />
+                <span className="text-sm font-medium">UPI QR</span>
+              </button>
+            </div>
+
+            {paymentMethod === 'cash' && (
+              <div>
+                <label htmlFor="cashPaidTo" className="block text-sm font-medium text-gray-700 mb-2">
+                  Name of the person you gave the cash to
+                </label>
+                <input
+                  id="cashPaidTo"
+                  type="text"
+                  value={cashPaidTo}
+                  onChange={(e) => setCashPaidTo(e.target.value)}
+                  maxLength={100}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900"
+                />
+              </div>
+            )}
+
+            {paymentMethod === 'qr' && (
+              upiLink ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center bg-gray-50 rounded-lg p-4">
+                    <div className="bg-white p-3 rounded-lg">
+                      <QRCodeSVG value={upiLink} size={180} />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 mt-3">Pay ₹{finalTotal.toFixed(2)}</p>
+                    <p className="text-xs text-gray-600 break-all text-center">UPI ID: {upiConfig?.upiId}</p>
+                    <a
+                      href={upiLink}
+                      className="sm:hidden mt-3 text-sm font-medium text-blue-600 underline"
+                    >
+                      Open in UPI app
+                    </a>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Upload payment screenshot
+                    </label>
+                    <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:border-blue-400 transition-colors">
+                      {screenshotPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- local blob preview
+                        <img src={screenshotPreview} alt="Payment screenshot preview" className="max-h-48 rounded" />
+                      ) : (
+                        <>
+                          <Upload className="h-6 w-6 text-gray-400 mb-1" />
+                          <span className="text-sm text-gray-600">Tap to choose image</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => handleScreenshotChange(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                    {screenshot && (
+                      <p className="text-xs text-gray-500 mt-1 truncate">{screenshot.name}</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-red-600">
+                  QR payment is not available right now. Please pay by cash.
+                </p>
+              )
+            )}
+          </div>
+
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
 
           <button
             onClick={handleCheckout}
@@ -231,7 +350,7 @@ export default function CartPage() {
             {loading ? 'Submitting Order...' : 'Place Order'}
           </button>
           <p className="text-xs text-gray-500 text-center mt-2">
-            Your order will be pending admin approval
+            Your order will be confirmed after the admin verifies your payment
           </p>
         </div>
       </div>

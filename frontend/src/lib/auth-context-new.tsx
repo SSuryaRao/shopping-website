@@ -104,11 +104,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfileOptions(null);
         }
       } else {
-        // No Firebase user - logged out
-        setUser(null);
+        // No Firebase user. Mobile / email / User ID logins have no Firebase session, so keep
+        // their JWT and restore it - clearing it here logged those users out on every refresh.
         setNeedsProfileCreation(false);
         setProfileOptions(null);
-        apiClient.clearTokens();
+        const existingJWT = apiClient.getAuthToken();
+        if (existingJWT) {
+          try {
+            setUser(await apiClient.getUserProfile());
+          } catch (error) {
+            // The main AuthProvider drops the token if the server rejects it (401)
+            console.error('Error restoring session:', error);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
       }
 
       setLoading(false);
@@ -219,11 +230,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear API client tokens first, so the sign-out listener can't restore the session
+      apiClient.clearTokens();
+
       // Clear Firebase auth
       await firebaseSignOut(auth);
-
-      // Clear API client tokens
-      apiClient.clearTokens();
 
       // Clear local state
       setUser(null);

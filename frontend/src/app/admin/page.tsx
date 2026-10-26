@@ -4,15 +4,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api';
 import { Product, User, Order } from '@/types';
-import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, UserPlus, ShoppingCart, Search, UserX, UserCheck } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Package, Users, TrendingUp, DollarSign, UserPlus, ShoppingCart, Search, UserX, UserCheck, Gift, Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import PaymentDetailsModal from '@/components/PaymentDetailsModal';
 import Link from 'next/link';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -20,6 +19,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [viewingPaymentOrder, setViewingPaymentOrder] = useState<Order | null>(null);
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'products' | 'users' | 'orders' | 'active' | 'purchase-for-user'>('products');
 
   // Search and filter states
@@ -42,6 +44,13 @@ export default function AdminPage() {
       fetchAdminData();
     }
   }, [user, authLoading]);
+
+  // Auto-hide the success / error banner
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), notice.type === 'success' ? 4000 : 8000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const fetchAdminData = async () => {
     try {
@@ -107,7 +116,7 @@ export default function AdminPage() {
   };
 
   const handleDeactivateUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to deactivate ${userName}? They will remain in the MLM tree but will not receive any further points.`)) {
+    if (!confirm(`Are you sure you want to deactivate ${userName}? They will remain in the referral tree but will not receive any further points.`)) {
       return;
     }
 
@@ -149,34 +158,54 @@ export default function AdminPage() {
     return matchesSearch && matchesFilter;
   });
 
-  const handleApproveOrder = async (orderId: string) => {
-    const notes = prompt('Enter approval notes (optional):');
+  // Approve / reject run in place: the row shows a spinner, all order buttons are locked until it
+  // finishes (no double approvals), and the list refreshes without reloading the page.
+  const processOrder = async (orderId: string, action: 'approve' | 'reject', input: string) => {
+    if (processingOrderId) return;
+
+    setProcessingOrderId(orderId);
     try {
-      await apiClient.approveOrder(orderId, notes || '');
-      alert('Order approved successfully! Points and commissions distributed.');
-      await fetchAdminData(); // Refresh data
+      if (action === 'approve') {
+        await apiClient.approveOrder(orderId, input);
+      } else {
+        await apiClient.rejectOrder(orderId, input);
+      }
+
+      setPendingOrders((orders) => orders.filter((o) => o._id !== orderId));
+      setViewingPaymentOrder(null);
+      setNotice({
+        type: 'success',
+        message: action === 'approve' ? 'Order approved. Points distributed.' : 'Order rejected.',
+      });
+      await fetchAdminData();
     } catch (error: unknown) {
-      console.error('Error approving order:', error);
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to approve order';
-      alert(errorMessage);
+      console.error(`Error trying to ${action} order:`, error);
+      setNotice({
+        type: 'error',
+        message: error instanceof Error ? error.message : `Failed to ${action} order`,
+      });
+    } finally {
+      setProcessingOrderId(null);
     }
+  };
+
+  const handleApproveOrder = async (orderId: string) => {
+    if (processingOrderId) return;
+    const notes = prompt('Enter approval notes (optional):');
+    if (notes === null) return; // Cancelled
+    await processOrder(orderId, 'approve', notes.trim());
   };
 
   const handleRejectOrder = async (orderId: string) => {
+    if (processingOrderId) return;
     const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
-
-    try {
-      await apiClient.rejectOrder(orderId, reason);
-      alert('Order rejected successfully.');
-      await fetchAdminData(); // Refresh data
-    } catch (error) {
-      console.error('Error rejecting order:', error);
-      alert('Failed to reject order');
-    }
+    if (!reason?.trim()) return;
+    await processOrder(orderId, 'reject', reason.trim());
   };
 
-  if (authLoading || loading) {
+  // Only wait for admin data when an admin is signed in - otherwise fall through so
+  // ProtectedRoute can redirect (previously this spun forever for logged-out users)
+  if (authLoading || (user?.isAdmin && loading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -190,6 +219,22 @@ export default function AdminPage() {
   return (
     <ProtectedRoute requireAdmin={true}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Success / error banner for order actions */}
+      {notice && (
+        <div
+          role="status"
+          className={`fixed top-20 right-4 left-4 sm:left-auto sm:w-96 z-[60] flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg ${
+            notice.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'
+          }`}
+        >
+          {notice.type === 'success' ? <CheckCircle className="h-5 w-5 shrink-0" /> : <XCircle className="h-5 w-5 shrink-0" />}
+          <p className="flex-1 text-sm font-medium">{notice.message}</p>
+          <button onClick={() => setNotice(null)} className="opacity-70 hover:opacity-100" aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -205,6 +250,13 @@ export default function AdminPage() {
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               Manage Orders
+            </Link>
+            <Link
+              href="/admin/rewards"
+              className="flex items-center px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+            >
+              <Gift className="h-4 w-4 mr-2" />
+              Rewards
             </Link>
             {user?.isSuperAdmin && (
               <Link
@@ -864,8 +916,15 @@ export default function AdminPage() {
                           {(typeof order.userId === 'object' && order.userId?.isActive) ? 'Active' : 'Inactive'}
                         </span>
                       </div>
-                      <h3 className="font-semibold text-gray-900">{typeof order.userId === 'object' ? order.userId?.name : 'N/A'}</h3>
+                      <button
+                        onClick={() => setViewingPaymentOrder(order)}
+                        className="font-semibold text-indigo-600 hover:underline text-left"
+                        title="View payment details"
+                      >
+                        {typeof order.userId === 'object' ? order.userId?.name : 'N/A'}
+                      </button>
                       <p className="text-xs text-gray-500">{typeof order.userId === 'object' ? order.userId?.uniqueUserId : 'N/A'}</p>
+                      <PaymentBadge order={order} />
                       <div className="mt-3 space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Product:</span>
@@ -893,14 +952,16 @@ export default function AdminPage() {
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleApproveOrder(order._id)}
-                      disabled={!(typeof order.userId === 'object' && order.userId?.isActive)}
-                      className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!!processingOrderId || !(typeof order.userId === 'object' && order.userId?.isActive)}
+                      className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Approve
+                      {processingOrderId === order._id && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {processingOrderId === order._id ? 'Processing...' : 'Approve'}
                     </button>
                     <button
                       onClick={() => handleRejectOrder(order._id)}
-                      className="flex-1 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                      disabled={!!processingOrderId}
+                      className="flex-1 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Reject
                     </button>
@@ -933,8 +994,15 @@ export default function AdminPage() {
                     <tr key={order._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order._id.slice(-6)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{typeof order.userId === 'object' ? order.userId?.name : 'N/A'}</div>
+                        <button
+                          onClick={() => setViewingPaymentOrder(order)}
+                          className="text-sm font-medium text-indigo-600 hover:underline text-left"
+                          title="View payment details"
+                        >
+                          {typeof order.userId === 'object' ? order.userId?.name : 'N/A'}
+                        </button>
                         <div className="text-xs text-gray-500">{typeof order.userId === 'object' ? order.userId?.uniqueUserId : 'N/A'}</div>
+                        <PaymentBadge order={order} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{typeof order.productId === 'object' ? order.productId?.name : 'N/A'}</div>
@@ -956,15 +1024,17 @@ export default function AdminPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                         <button
                           onClick={() => handleApproveOrder(order._id)}
-                          disabled={!(typeof order.userId === 'object' && order.userId?.isActive)}
-                          className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!!processingOrderId || !(typeof order.userId === 'object' && order.userId?.isActive)}
+                          className="inline-flex items-center gap-1.5 bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                           title={!(typeof order.userId === 'object' && order.userId?.isActive) ? 'User must be activated first' : 'Approve order'}
                         >
-                          Approve
+                          {processingOrderId === order._id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          {processingOrderId === order._id ? 'Processing...' : 'Approve'}
                         </button>
                         <button
                           onClick={() => handleRejectOrder(order._id)}
-                          className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                          disabled={!!processingOrderId}
+                          className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Reject
                         </button>
@@ -977,6 +1047,18 @@ export default function AdminPage() {
             </>
           )}
         </div>
+      )}
+
+      {/* Payment Details Modal (opened by clicking the customer name on a pending order) */}
+      {viewingPaymentOrder && (
+        <PaymentDetailsModal
+          order={viewingPaymentOrder}
+          allOrders={pendingOrders}
+          onClose={() => setViewingPaymentOrder(null)}
+          onApprove={handleApproveOrder}
+          onReject={handleRejectOrder}
+          processing={processingOrderId === viewingPaymentOrder._id}
+        />
       )}
 
       {/* Add/Edit Product Modal */}
@@ -1005,6 +1087,18 @@ export default function AdminPage() {
       )}
       </div>
     </ProtectedRoute>
+  );
+}
+
+// Small label showing how a pending order was paid
+function PaymentBadge({ order }: { order: Order }) {
+  if (!order.paymentMethod) return null;
+  return (
+    <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
+      order.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+    }`}>
+      {order.paymentMethod === 'cash' ? 'Cash' : 'UPI QR'}
+    </span>
   );
 }
 
@@ -1318,7 +1412,7 @@ function ProductModal({ product, onClose, onSave }: ProductModalProps) {
               {/* MLM Commission Structure */}
               <div className="md:col-span-2 bg-indigo-50 rounded-xl p-6 border-2 border-indigo-200">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-bold text-indigo-900">MLM Points Distribution</h4>
+                  <h4 className="text-lg font-bold text-indigo-900">Refer &amp; Earn Points Distribution</h4>
 
                   {/* Toggle Button */}
                   <div className="flex items-center gap-3">

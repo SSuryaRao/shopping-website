@@ -136,3 +136,6 @@ build/
 # Uploads
 uploads/*
 !uploads/.gitkeep
+
+# Payment screenshots (private, never commit)
+private-uploads/
