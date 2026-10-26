@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
-import { ShoppingBag, User, LogOut, Settings, Star, ShoppingCart, Menu, X, Home, LayoutDashboard, Network } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Settings, Star, ShoppingCart, Menu, X, Home, LayoutDashboard, Network, Gift } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Navigation() {
@@ -84,9 +84,13 @@ export default function Navigation() {
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
-                  <Link href="/mlm" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
+                  <Link href="/refer-earn" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
                     <Network className="h-4 w-4" />
-                    <span>MLM</span>
+                    <span>Refer &amp; Earn</span>
+                  </Link>
+                  <Link href="/rewards" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
+                    <Gift className="h-4 w-4" />
+                    <span>Rewards</span>
                   </Link>
                   {user?.isAdmin && (
                     <Link href="/admin" className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-indigo-50">
@@ -296,7 +300,7 @@ export default function Navigation() {
                   </Link>
 
                   <Link
-                    href="/mlm"
+                    href="/refer-earn"
                     className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
                     onClick={closeMobileMenu}
                   >
@@ -304,8 +308,22 @@ export default function Navigation() {
                       <Network className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
-                      <span className="font-bold text-gray-900">MLM Network</span>
-                      <p className="text-sm text-gray-500">Referrals & commissions</p>
+                      <span className="font-bold text-gray-900">Refer &amp; Earn</span>
+                      <p className="text-sm text-gray-500">Invite friends &amp; earn points</p>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/rewards"
+                    className="flex items-center space-x-4 px-6 py-4 hover:bg-indigo-50 transition-colors active:bg-indigo-100"
+                    onClick={closeMobileMenu}
+                  >
+                    <div className="p-2 rounded-xl bg-pink-100">
+                      <Gift className="h-5 w-5 text-pink-600" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-900">Rewards</span>
+                      <p className="text-sm text-gray-500">Redeem your points</p>
                     </div>
                   </Link>
 

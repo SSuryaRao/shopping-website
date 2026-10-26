@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "nodemon src/index.ts",
+    "build": "node init && tsc",
+    "start": "node init && node dist/index.js",
+    "dev": "node init && nodemon src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "fix-index": "ts-node src/scripts/fixFirebaseUidIndex.ts",
     "migrate:activate-users": "ts-node src/scripts/migrate-activate-users.ts",

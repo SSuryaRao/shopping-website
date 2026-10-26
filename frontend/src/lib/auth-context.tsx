@@ -10,7 +10,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth, googleProvider } from './firebase';
-import { apiClient } from './api';
+import { apiClient, ApiError } from './api';
 import { User, AccountOption } from '@/types';
 
 interface AuthContextType {
@@ -49,78 +49,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accountOptions, setAccountOptions] = useState<AccountOption[] | null>(null);
   const [tempToken, setTempToken] = useState<string | null>(null);
 
+  // Mobile / email / User ID logins use our own JWT (no Firebase session), so on page load
+  // restore that session from the stored token instead of treating the user as logged out.
+  const restoreJwtSession = async () => {
+    if (!apiClient.getAuthToken()) {
+      setUser(null);
+      return;
+    }
+
+    try {
+      const userProfile = await apiClient.getUserProfile();
+      setUser(userProfile);
+    } catch (error) {
+      console.error('Error restoring session:', error);
+      // Only forget the token when the server rejects it - a network blip must not log the user out
+      if (error instanceof ApiError && error.status === 401) {
+        apiClient.clearTokens();
+      }
+      setUser(null);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setFirebaseUser(firebaseUser);
       setLoading(true); // Ensure loading is true during auth state changes
 
-      if (firebaseUser) {
-        try {
-          const token = await firebaseUser.getIdToken(true); // Force refresh to get custom claims
-          apiClient.setAuthToken(token);
-
-          // Try to get user profile, but handle case where user isn't registered yet
-          try {
-            const userProfile = await apiClient.getUserProfile();
-            console.log('User profile loaded:', userProfile);
-            setUser(userProfile);
-          } catch (error: unknown) {
-            console.error('Error loading user profile:', error);
-
-            if (error instanceof Error && (error.message?.includes('not registered') || error.message?.includes('404'))) {
-              // User exists in Firebase but not in our backend
-              console.log('User not registered in backend');
-
-              // For Google users, try auto-registration as customer
-              if (firebaseUser.providerData.some(provider => provider.providerId === 'google.com')) {
-                console.log('Auto-registering Google user as customer');
-                try {
-                  const registrationData = {
-                    role: 'customer' as const,
-                    profile: {
-                      name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                    }
-                  };
-
-                  await apiClient.register(registrationData);
-                  console.log('Auto-registration successful');
-
-                  // Fetch the newly created user profile
-                  const newUserProfile = await apiClient.getUserProfile();
-                  setUser(newUserProfile);
-                  return; // Exit early on success
-                } catch (registerError: unknown) {
-                  console.error('Auto-registration failed:', registerError);
-                }
-              }
-
-              // If not Google user or auto-registration failed
-              setUser(null);
-            } else if (error instanceof Error && (error.message?.includes('Failed to fetch') || error.message?.includes('fetch'))) {
-              // Network error - backend is not running
-              console.warn('Backend server appears to be offline. User can still browse products but cannot access authenticated features.');
-              setUser(null);
-            } else {
-              // Other API errors
-              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-              console.warn('API error, continuing without user profile:', errorMessage);
-              setUser(null);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          setUser(null);
+      try {
+        if (firebaseUser) {
+          await loadFirebaseUser(firebaseUser);
+        } else {
+          await restoreJwtSession();
         }
-      } else {
-        setUser(null);
-        apiClient.setAuthToken('');
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  const loadFirebaseUser = async (firebaseUser: FirebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken(true); // Force refresh to get custom claims
+      apiClient.setAuthToken(token);
+
+      // Try to get user profile, but handle case where user isn't registered yet
+      try {
+        const userProfile = await apiClient.getUserProfile();
+        console.log('User profile loaded:', userProfile);
+        setUser(userProfile);
+      } catch (error: unknown) {
+        console.error('Error loading user profile:', error);
+
+        if (error instanceof Error && (error.message?.includes('not registered') || error.message?.includes('404'))) {
+          // User exists in Firebase but not in our backend
+          console.log('User not registered in backend');
+
+          // For Google users, try auto-registration as customer
+          if (firebaseUser.providerData.some(provider => provider.providerId === 'google.com')) {
+            console.log('Auto-registering Google user as customer');
+            try {
+              const registrationData = {
+                role: 'customer' as const,
+                profile: {
+                  name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                }
+              };
+
+              await apiClient.register(registrationData);
+              console.log('Auto-registration successful');
+
+              // Fetch the newly created user profile
+              const newUserProfile = await apiClient.getUserProfile();
+              setUser(newUserProfile);
+              return; // Exit early on success
+            } catch (registerError: unknown) {
+              console.error('Auto-registration failed:', registerError);
+            }
+          }
+
+          // If not Google user or auto-registration failed
+          setUser(null);
+        } else if (error instanceof Error && (error.message?.includes('Failed to fetch') || error.message?.includes('fetch'))) {
+          // Network error - backend is not running
+          console.warn('Backend server appears to be offline. User can still browse products but cannot access authenticated features.');
+          setUser(null);
+        } else {
+          // Other API errors
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.warn('API error, continuing without user profile:', errorMessage);
+          setUser(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUser(null);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -212,6 +238,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear API client tokens first, so the sign-out listener can't restore the session
+      apiClient.clearTokens();
+
       // Clear Firebase auth
       await signOut(auth);
 
@@ -220,9 +249,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(null);
       setAccountOptions(null);
       setTempToken(null);
-
-      // Clear API client tokens
-      apiClient.clearTokens();
 
       // Redirect to home page
       if (typeof window !== 'undefined') {
@@ -338,13 +364,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // NEW: Refresh user profile data
   const refreshUser = async () => {
     try {
-      if (!firebaseUser) {
-        console.log('No firebase user to refresh');
+      if (firebaseUser) {
+        const token = await firebaseUser.getIdToken(true);
+        apiClient.setAuthToken(token);
+      } else if (!apiClient.getAuthToken()) {
+        console.log('No session to refresh');
         return;
       }
-
-      const token = await firebaseUser.getIdToken(true);
-      apiClient.setAuthToken(token);
 
       const userProfile = await apiClient.getUserProfile();
       console.log('User profile refreshed:', userProfile);

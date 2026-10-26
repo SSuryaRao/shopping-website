@@ -23,7 +23,7 @@ interface Order {
   quantity: number;
   totalPrice: number;
   pointsEarned: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'completed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed';
   createdAt: string;
   updatedAt: string;
@@ -82,6 +82,8 @@ export default function AdminOrdersPage() {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-emerald-100 text-emerald-800';
       case 'processing':
         return 'bg-blue-100 text-blue-800';
       case 'shipped':
@@ -99,6 +101,8 @@ export default function AdminOrdersPage() {
     switch (status) {
       case 'pending':
         return <Clock className="h-4 w-4" />;
+      case 'completed':
+        return <CheckCircle className="h-4 w-4" />;
       case 'processing':
         return <Package className="h-4 w-4" />;
       case 'shipped':
@@ -292,6 +296,7 @@ export default function AdminOrdersPage() {
                         className="block w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="pending">Pending</option>
+                        <option value="completed" disabled>Approved</option>
                         <option value="processing">Processing</option>
                         <option value="shipped">Shipped</option>
                         <option value="delivered">Delivered</option>

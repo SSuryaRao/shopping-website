@@ -213,9 +213,9 @@ function DashboardContent() {
                   <p>Your account is awaiting admin activation. Once activated, you will be able to:</p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
                     <li>Generate and use referral codes</li>
-                    <li>Join the MLM tree and earn commissions</li>
+                    <li>Join Refer &amp; Earn and earn points</li>
                     <li>View your downline and upline</li>
-                    <li>Receive MLM commission points</li>
+                    <li>Receive referral points</li>
                   </ul>
                   <p className="mt-2 font-medium">Please contact support if you have been waiting for more than 24 hours.</p>
                 </div>

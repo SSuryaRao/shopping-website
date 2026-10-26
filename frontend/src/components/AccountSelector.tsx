@@ -151,7 +151,7 @@ export default function AccountSelector({ accounts, onSelect, onBack }: AccountS
             <strong>About User IDs:</strong> Each account is identified by a unique User ID (e.g., USR123456).
           </p>
           <p className="text-sm text-blue-800">
-            <strong>Tip:</strong> Remember your User ID for direct login! Each account has separate MLM position, points, and settings.
+            <strong>Tip:</strong> Remember your User ID for direct login! Each account has separate referral position, points, and settings.
           </p>
         </div>
       </div>

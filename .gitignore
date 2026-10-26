@@ -10,9 +10,6 @@ dist/
 out/
 
 # Environment variables and credentials
-.env
-.env.*
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -55,7 +52,6 @@ coverage/
 .nyc_output
 
 # IDE and editor files
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -132,3 +128,4 @@ out-tsc/
 .cache
 .vercel
 .netlify
+config.bat
